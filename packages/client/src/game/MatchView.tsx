@@ -112,36 +112,53 @@ export function MatchView({ onExit, onRematch }: Props) {
   };
 
   return (
-    <div className="match">
-      <div id="world">
-        <div ref={hostRef} style={{ width: '100%', height: '100%' }} />
-        <div className="hud">
-          <span className="you">
-            YOU <b>{hud.you}</b>
+    <div className="fixed inset-0 flex items-center justify-center bg-cream">
+      <div
+        id="world"
+        className="relative aspect-video w-[min(100vw,calc(100vh*16/9))] overflow-hidden rounded-[10px] bg-[#0b0e14] portrait:w-[min(100vh,calc(100vw*16/9))] portrait:rotate-90"
+      >
+        <div ref={hostRef} className="h-full w-full" />
+        <div className="pointer-events-none absolute left-1.5 right-1.5 top-1.5 flex items-center justify-between gap-2 whitespace-nowrap rounded-[10px] bg-ink/85 px-2.5 py-1.5 text-[13px] text-white">
+          <span>
+            YOU <b className="text-[#ffb3b3]">{hud.you}</b>
           </span>
           <span>
-            ⚔ {hud.alive} · shrink <b>{hud.boundary}</b>
+            ⚔ {hud.alive} · shrink <b className="text-lemon">{hud.boundary}</b>
           </span>
           <span>seed {hud.seed}</span>
         </div>
-        <div className="controls">
-          <div className="pad">
-            <button className="up" onPointerDown={() => setTurn('up')}>
+        <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between gap-2.5">
+          <div className="grid grid-cols-3 grid-rows-2 gap-[5px]">
+            <button
+              className="col-start-2 row-start-1 rounded-lg border border-[#3d4a61] bg-[#2a3444] text-lg text-white active:bg-[#4a5b78]"
+              onPointerDown={() => setTurn('up')}
+            >
               ▲
             </button>
-            <button className="left" onPointerDown={() => setTurn('left')}>
+            <button
+              className="col-start-1 row-start-2 rounded-lg border border-[#3d4a61] bg-[#2a3444] text-lg text-white active:bg-[#4a5b78]"
+              onPointerDown={() => setTurn('left')}
+            >
               ◀
             </button>
-            <button className="down" onPointerDown={() => setTurn('down')}>
+            <button
+              className="col-start-2 row-start-2 rounded-lg border border-[#3d4a61] bg-[#2a3444] text-lg text-white active:bg-[#4a5b78]"
+              onPointerDown={() => setTurn('down')}
+            >
               ▼
             </button>
-            <button className="right" onPointerDown={() => setTurn('right')}>
+            <button
+              className="col-start-3 row-start-2 rounded-lg border border-[#3d4a61] bg-[#2a3444] text-lg text-white active:bg-[#4a5b78]"
+              onPointerDown={() => setTurn('right')}
+            >
               ▶
             </button>
           </div>
-          <div className="hint">{hud.boosting ? 'BOOSTING — burning tail!' : 'hold BOOST to speed up!'}</div>
+          <div className="pointer-events-none absolute left-1/2 top-[52px] -translate-x-1/2 whitespace-nowrap rounded-full bg-white px-3.5 py-2 text-[13px] text-ink shadow-[0_2px_8px_rgba(0,0,0,0.15)]">
+            {hud.boosting ? 'BOOSTING — burning tail!' : 'hold BOOST to speed up!'}
+          </div>
           <button
-            className="boost"
+            className="h-[76px] w-24 rounded-[14px] border-none bg-linear-to-b from-[#f2b04d] to-[#d18a1c] text-base font-bold text-[#2b1a00] active:scale-95"
             onPointerDown={() => setBoost(true)}
             onPointerUp={() => setBoost(false)}
             onPointerLeave={() => setBoost(false)}
@@ -151,17 +168,23 @@ export function MatchView({ onExit, onRematch }: Props) {
         </div>
       </div>
       {result && (
-        <div className="result-card">
+        <div className="fixed inset-0 z-10 flex flex-col items-center justify-center gap-2.5 bg-cream/95 text-center">
           <h2>
             {result.winner === 0 ? '🏆 You win!' : result.winner === 1 ? '🤖 Bot wins.' : '💀 Draw'}
           </h2>
-          <p>
+          <p className="m-0 mb-2 text-muted">
             Score {result.you.score} · Length {result.you.length}
           </p>
-          <button className="btn-play" onClick={onRematch}>
+          <button
+            className="w-[210px] cursor-pointer rounded-[14px] border-none bg-coral p-4 text-xl font-extrabold text-white shadow-[0_6px_0_var(--color-coral-dark)] active:translate-y-[3px] active:shadow-[0_3px_0_var(--color-coral-dark)]"
+            onClick={onRematch}
+          >
             Rematch
           </button>
-          <button className="btn-ghost" onClick={onExit}>
+          <button
+            className="cursor-pointer rounded-full border-[1.5px] border-teal bg-transparent px-4 py-2 text-[13px] text-ink"
+            onClick={onExit}
+          >
             Lobby
           </button>
         </div>

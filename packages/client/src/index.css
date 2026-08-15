@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+/* Fresh Rink palette (D21) — bright, friendly, trustworthy. No neon/dark-crypto. */
+@theme {
+  --color-cream: #f7f5f0;
+  --color-ink: #1f2937;
+  --color-teal: #3ddc84;
+  --color-coral: #ff6b6b;
+  --color-coral-dark: #d94f4f;
+  --color-lemon: #f7e04d;
+  --color-card: #ffffff;
+  --color-muted: #8a8f98;
+  --color-line: #e5e1d8;
+}
+
+@layer base {
+  html,
+  body {
+    height: 100%;
+  }
+
+  #root {
+    height: 100%;
+  }
+
+  /* Game shell — full-viewport, no scroll, pointer-only input. */
+  body {
+    overflow: hidden;
+    background-color: var(--color-cream);
+    color: var(--color-ink);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+}
+
+/* Phaser creates the canvas element itself — it cannot carry utility classes. */
+#world canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}

@@ -12,10 +12,12 @@
   },
   "dependencies": {
     "@snake/sim": "workspace:*",
+    "@tailwindcss/vite": "^4.3.3",
     "colyseus.js": "^0.16.22",
     "phaser": "^3.90.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "tailwindcss": "^4.3.3"
   },
   "devDependencies": {
     "@types/react": "^19.2.18",

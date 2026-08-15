@@ -49,9 +49,10 @@ Dependency direction (enforced): `server → sim` · `client → sim`. Client an
 - **Server runtime = tsx** (source-mode; no build step). Production on Railway also runs `tsx src/index.ts`.
 - **Sim rules:** tick-indexed, integer math, seeded RNG with context separation (arena/bot/effects),
   arena pre-derived from seed. `SIM_VERSION` gates every run; golden tests lock behavior.
-- **UI is currently plain CSS** (`packages/client/src/styles.css`, Fresh Rink palette from the design
-  docs). Tailwind v4 is **not installed yet** — per `agents.md` Rule 1, once adopted, UI must use
-  Tailwind v4 canonical class names (see the rename table in `agents.md`).
+- **UI is Tailwind v4** (`@import "tailwindcss"` in `packages/client/src/index.css`, Fresh Rink palette
+  defined via `@theme`). Per `agents.md` Rule 1, all UI must use **Tailwind v4 canonical class names**
+  (see the rename table in `agents.md`) — never v3 aliases like `shadow`, `rounded`, `ring`,
+  `bg-gradient-to-*`, or `*-opacity-*`.
 - **Wallet is a stub** (`packages/client/src/wallet/stub.ts`) — real Nimiq provider `init()` is W2.
 - Today's Run attestation gate in `/runs/verify` is stubbed pending the tx-signing spike.
 - Room codes: 4-char Crockford base32 (no I/L/O/U).

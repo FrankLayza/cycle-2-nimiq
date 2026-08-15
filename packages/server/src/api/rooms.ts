@@ -5,7 +5,7 @@ import { generateCode, isValidCode } from '../rooms/codes.js';
 const ROOM_TTL_MS = 2 * 60 * 60 * 1000; // 2h idle TTL (architecture §4.4)
 
 export function registerRooms(app: FastifyInstance): void {
-  app.post('/api/v1/rooms', async (req, reply) => {
+  app.post('/api/v1/rooms', async (req) => {
     const body = (req.body ?? {}) as { mode?: string };
     const mode = body.mode === 'pvp' ? 'pvp' : 'bot';
     const code = generateCode();

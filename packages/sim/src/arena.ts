@@ -1,4 +1,4 @@
-import { GRID_SIZE, MAX_TICKS, MIN_BOUND, SHRINK_EVERY, SPAWN_CANDIDATES } from './config.js';
+import { GRID_SIZE, MAX_TICKS, SHRINK_EVERY, SPAWN_CANDIDATES } from './config.js';
 import { RngContext, rngFor } from './rng.js';
 import type { Arena, Cell } from './types.js';
 
