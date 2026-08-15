@@ -1,6 +1,6 @@
 # COMPETITIVE SNAKE GAME — Living Project Document
 
-**Status:** Concept approved · Rewards agreed · Spike verified · Strategy approved · Design locked (Lawn League, D24) · **Architecture approved (D25–D34) · W1 scaffold in progress — Next: sim port + golden tests green**
+**Status:** Concept approved · Rewards agreed · Spike verified · Strategy approved · Design locked (Lawn League, D24) · Architecture approved (D25–D34) · **W1 scaffold DONE — monorepo green (typecheck + 23 tests incl. 2-client PvP e2e). Next: W2 — Nimiq wallet init, room-code PvP client wiring, real-device pass**
 **Competition:** Nimiq Mini Apps Competition — Cycle II (Aug 17 – Sep 11, 2026)
 **Internal submission target (T-5):** Sep 6, 2026
 **Team:** 2 builders · **Budget:** ~200 team-hours · **Updated:** 2026-08-15
@@ -157,6 +157,11 @@
 | D32 | **Payouts:** cron 23:55 UTC daily + weekly Sunday; re-verify + attestation + idempotency before signing; testnet first, mainnet after | ✅ Approved |
 | D33 | **Testnet stakes** = extension point on room/API only (stretch, W4) — no MVP build | ✅ Approved |
 | D34 | **Today's Run submission requires a signed attestation** (one sign per entry: runId+date+seed+score — NimQuest pattern). Prevents input-log copying; free-play/PvP stay sign-less | ✅ Approved (user confirmed 2026-08-15) |
+| D35 | **Scaffold runtime:** server runs via tsx (source-mode, incl. Railway); sim + server ship as TS source with no build step in W1; client via Vite (bundles the sim). Zero build orchestration | ✅ Done |
+| D36 | **Colyseus 0.16 ecosystem pinned** (colyseus, @colyseus/core, @colyseus/schema, @colyseus/ws-transport 0.16.x) to match the colyseus.js 0.16 client; state schemas via decorator-free `defineTypes()` + constructor assignment (transpiler-agnostic) | ✅ Done |
+| D37 | **W1 e2e verified:** two Colyseus clients join a room-code PvP match → countdown → playing → finished with identical authoritative state; server tick loop drives the shared sim (D27 input log captured) | ✅ Done |
+| D38 | **W1 shipped `/api/v1/runs/verify`** (replay + `UNIQUE(day, log_hash)` dedupe + attestation gate) and the SQLite schema — ahead of the W2 roadmap | ✅ Done |
+| D39 | **Client W1 = local bot matches** (spike path: client owns the sim) + render-only Phaser scene + rotated overlay (D11); room-code PvP client wiring deferred to W2 per roadmap | ✅ Done |
 
 ---
 
@@ -190,7 +195,7 @@
 
 ## 11. Roadmap (Cycle II) — detailed
 
-- **W1 (Aug 17–23):** Repo (public, MIT) + register + join Skool + deploy skeleton. Port spike sim → shared pure-TS module. Colyseus room + basic sync, bot port, rotated UI shell in React/Phaser. **Milestone: 2 clients connect and play locally.** Call Aug 19.
+- **W1 (Aug 17–23):** ✅ **DONE (2026-08-15).** Monorepo scaffolded; sim ported with golden/determinism/replay tests green; Colyseus room + tick loop + room codes + `/health`; rotated React/Phaser shell with local bot play; CI + deploy workflows; **2-client PvP e2e green**. Remaining W1 items: public GitHub repo + registration + Skool, Railway + Pages deploy wiring (needs credentials), Nimiq tx-signing spike. Call Aug 19.
 - **W2 (Aug 24–30):** Mechanics polish + **first real-device pass in Nimiq Pay** (rotation, safe areas, touch). Room-code PvP, spectator-lite, replay capture + verification API, Today's Run, leaderboard, streaks. **Milestone: end-to-end playable in Nimiq Pay on 2 devices, testnet.** Call Aug 26.
 - **W3 (Aug 31–Sep 6):** **Early access — submissions go public.** Fix feedback, reward pool live, marketing push, demo-video draft. **Scope gate Sep 1: feature-freeze (D16).** Call Sep 2.
 - **W4 (Sep 7–11):** **Submit Sep 6–9 (internal target Sep 6, hard deadline Sep 11 23:59).** Polish D&UX items (onboarding <60s, error handling, load speed), README + 250-word description, final demo video, final community push. Call Sep 9.

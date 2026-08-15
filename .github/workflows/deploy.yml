@@ -1,0 +1,44 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm --filter @snake/sim test
+      - run: pnpm --filter @snake/server test
+      - run: pnpm --filter @snake/client build
+
+      # Server: Railway deploy webhook (create a Deploy Hook in Railway and
+      # add it as the RAILWAY_DEPLOY_HOOK secret in GitHub).
+      - name: Trigger Railway deploy
+        env:
+          RAILWAY_DEPLOY_HOOK: ${{ secrets.RAILWAY_DEPLOY_HOOK }}
+        run: |
+          if [ -n "$RAILWAY_DEPLOY_HOOK" ]; then
+            curl -fsS -X POST "$RAILWAY_DEPLOY_HOOK" || echo "Railway webhook failed (ignoring)"
+          else
+            echo "No RAILWAY_DEPLOY_HOOK secret — skipping server deploy"
+          fi
+
+      # Client: host-agnostic static deploy (Cloudflare Pages / Netlify /
+      # competition hosting). Uncomment + configure the one you use.
+      # - name: Deploy client (Cloudflare Pages)
+      #   uses: cloudflare/wrangler-action@v3
+      #   with:
+      #     apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      #     accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      #     command: pages deploy packages/client/dist --project-name=snake-rink

@@ -1,0 +1,122 @@
+import { createHash, randomUUID } from 'node:crypto';
+import type { FastifyInstance } from 'fastify';
+import { SIM_VERSION, verifyRun } from '@snake/sim';
+import type { AppliedInput, RunRecord } from '@snake/sim';
+import { loadConfig } from '../config.js';
+import { getDb } from '../db/client.js';
+import { dailySeed, todayUtc } from '../services/seed.js';
+import { REWARD_TIERS } from './rewards.js';
+
+export function logHashOf(inputs: AppliedInput[][]): string {
+  return createHash('sha256').update(JSON.stringify(inputs)).digest('hex');
+}
+
+export function registerRuns(app: FastifyInstance): void {
+  app.get('/api/v1/run/today', async () => {
+    const cfg = loadConfig();
+    const day = todayUtc();
+    const seed = dailySeed(day, cfg.seedSalt);
+    return {
+      date: day,
+      seed,
+      simVersion: SIM_VERSION,
+      startsAt: `${day}T00:00:00.000Z`,
+      endsAt: `${day}T23:59:59.999Z`,
+      rewardTiers: REWARD_TIERS,
+      rules: 'Solo seeded run — identical arena for everyone. Score = pellets + length + survival ticks.',
+    };
+  });
+
+  app.post('/api/v1/runs/verify', async (req, reply) => {
+    const body = (req.body ?? {}) as Partial<RunRecord> & { attestation?: string };
+    const cfg = loadConfig();
+    const day = body.day ?? todayUtc();
+    const seed = Number(body.seed);
+    const version = Number(body.simVersion);
+    const wallet = String(body.wallet ?? '');
+    const inputs = body.inputs as AppliedInput[][] | undefined;
+    const reportedScore = Number(body.reportedScore);
+    const attestation = body.attestation;
+
+    if (!inputs || !wallet || !Number.isFinite(seed) || !Number.isFinite(reportedScore)) {
+      return reply.code(400).send({ error: 'missing fields: inputs, wallet, seed, reportedScore' });
+    }
+    if (seed !== dailySeed(day, cfg.seedSalt)) {
+      return reply.code(400).send({ error: 'seed does not match the day' });
+    }
+    if (version !== SIM_VERSION) {
+      return reply.code(400).send({ error: `SIM_VERSION mismatch: ${version}` });
+    }
+    if (!attestation) {
+      // TODO(W1 spike): require + verify the Nimiq signature (D34) once the
+      // tx-signing / wallet lib lands. Today's Run is the only signed flow.
+      return reply.code(400).send({ error: 'attestation required (D34)' });
+    }
+
+    const record: RunRecord = {
+      id: randomUUID(),
+      day,
+      wallet,
+      seed,
+      simVersion: version,
+      mode: 'solo',
+      inputs,
+      reportedScore,
+      logHash: logHashOf(inputs),
+      attestedAt: Date.now(),
+      attestation,
+    };
+
+    const res = verifyRun(record);
+    if (!res.valid) {
+      return reply.code(422).send({ valid: false, score: res.score, reason: res.reason });
+    }
+
+    const db = getDb();
+    try {
+      db.prepare(
+        `INSERT INTO runs (id, day, wallet, seed, sim_version, mode, inputs, log_hash, score, length, status, attested_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'verified', ?)`,
+      ).run(
+        record.id,
+        day,
+        wallet,
+        seed,
+        version,
+        'solo',
+        JSON.stringify(inputs),
+        record.logHash,
+        res.score,
+        0,
+        record.attestedAt,
+      );
+    } catch (err) {
+      if (String(err).includes('UNIQUE constraint failed')) {
+        return reply.code(409).send({ valid: false, reason: 'duplicate run — this input log was already submitted (D29)' });
+      }
+      throw err;
+    }
+
+    const rank = rankFor(day, wallet);
+    return {
+      valid: true,
+      score: res.score,
+      rank,
+      runId: record.id,
+      rewardTier: rank !== null && rank <= REWARD_TIERS.length ? REWARD_TIERS.find((t) => t.rank === rank) : undefined,
+    };
+  });
+}
+
+function rankFor(day: string, wallet: string): number | null {
+  const db = getDb();
+  const rows = db
+    .prepare(
+      `SELECT wallet, MAX(score) AS best FROM runs
+       WHERE day = ? AND status = 'verified'
+       GROUP BY wallet ORDER BY best DESC`,
+    )
+    .all(day) as { wallet: string; best: number }[];
+  const index = rows.findIndex((r) => r.wallet === wallet);
+  return index >= 0 ? index + 1 : null;
+}
