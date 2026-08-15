@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Competitive Snake — Fresh Rink Wireframes</title>
+<style>
+  :root {
+    --page: #efe9df; --bg: #f7f5f0; --ink: #2b2b33; --muted: #8a8578;
+    --coral: #ff6f61; --coral-d: #e85d50; --teal: #2ec4b6; --teal-d: #1f9d92;
+    --lemon: #ffe66d; --bounty: #ff9f43; --line: #e4ded2; --white: #fff;
+    --shadow: 0 12px 32px rgba(43,43,51,.14);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--page); font-family: system-ui, -apple-system, sans-serif; color: var(--ink); padding: 32px 24px 64px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+  .row { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
+  .frame-wrap { width: 320px; }
+  .frame-label { font-size: 13px; font-weight: 700; margin: 0 0 8px; display: flex; justify-content: space-between; align-items: baseline; }
+  .frame-label .note { font-weight: 400; color: var(--muted); font-size: 11px; }
+  .phone {
+    width: 100%; height: 640px; background: var(--bg); border-radius: 36px; border: 8px solid #1f1f26;
+    box-shadow: var(--shadow); overflow: hidden; position: relative; display: flex; flex-direction: column;
+  }
+  /* ---------- shared atoms ---------- */
+  .btn { border-radius: 14px; font-weight: 800; font-size: 15px; text-align: center; padding: 14px; border: none; cursor: pointer; }
+  .btn-primary { background: var(--coral); color: #fff; }
+  .btn-teal { background: var(--teal); color: #fff; }
+  .btn-ghost { background: var(--white); color: var(--ink); border: 2px solid var(--line); }
+  .btn-block { width: 100%; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 6px 12px; font-size: 12px; font-weight: 700; }
+  .chip-coral { background: #ffe3df; color: var(--coral-d); }
+  .chip-teal { background: #d9f4f0; color: var(--teal-d); }
+  .chip-lemon { background: #fff3bd; color: #8a6d00; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px 0; }
+  .wordmark { font-weight: 900; font-size: 20px; letter-spacing: -.02em; }
+  .wordmark b { color: var(--coral); }
+  .wallet { font-size: 11px; color: var(--muted); background: var(--white); border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px; }
+  .section-pad { padding: 0 18px; }
+  .muted { color: var(--muted); font-size: 12px; }
+  .num { font-weight: 900; font-variant-numeric: tabular-nums; }
+  /* ---------- lobby ---------- */
+  .lobby-hero { text-align: center; padding: 26px 18px 14px; }
+  .lobby-hero .splash { font-size: 44px; }
+  .lobby-hero h2 { margin: 8px 0 2px; font-size: 24px; }
+  .lobby-hero p { margin: 0; color: var(--muted); font-size: 13px; }
+  .lobby-actions { display: flex; flex-direction: column; gap: 10px; padding: 10px 18px; }
+  .room-row { display: flex; gap: 10px; }
+  .room-row .btn { flex: 1; }
+  .streak-strip { display: flex; gap: 6px; justify-content: center; padding: 12px 18px; }
+  .streak-day { width: 30px; height: 30px; border-radius: 10px; background: var(--white); border: 2px solid var(--line); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; color: var(--muted); }
+  .streak-day.on { background: var(--lemon); border-color: #e6c94d; color: #7a5d00; }
+  .streak-day.today { border-style: dashed; border-color: var(--coral); color: var(--coral); }
+  .lobby-foot { margin-top: auto; padding: 0 18px 20px; text-align: center; }
+  /* ---------- match ---------- */
+  .match-stage { position: relative; flex: 1; margin: 12px 10px; border-radius: 18px; overflow: hidden; }
+  .board { position: absolute; inset: 0; background: #fff; background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 20px 20px; }
+  .snake { position: absolute; border-radius: 6px; }
+  .snake-you { background: var(--teal); }
+  .snake-rival { background: var(--coral); }
+  .pellet { position: absolute; border-radius: 50%; background: var(--lemon); border: 2px solid #e6c94d; }
+  .bounty { background: var(--bounty); border-color: #d97b26; }
+  .bounds { position: absolute; inset: 14px; border: 3px dashed var(--muted); border-radius: 10px; }
+  .hud-overlay { position: absolute; top: 0; left: 0; right: 0; display: flex; justify-content: space-between; padding: 10px 12px; }
+  .hud-pill { background: rgba(247,245,240,.92); border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px; font-size: 12px; font-weight: 800; }
+  .hint-pill { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); background: var(--ink); color: #fff; border-radius: 999px; padding: 8px 14px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .match-controls { display: flex; align-items: center; justify-content: space-between; padding: 8px 14px 18px; }
+  .dpad { display: grid; grid-template-columns: repeat(3, 40px); grid-template-rows: repeat(2, 40px); gap: 4px; }
+  .dpad .d { background: var(--white); border: 2px solid var(--line); border-radius: 10px; font-size: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; color: var(--ink); }
+  .dpad .up { grid-column: 2; grid-row: 1; }
+  .dpad .l { grid-column: 1; grid-row: 2; }
+  .dpad .dwn { grid-column: 2; grid-row: 2; }
+  .dpad .r { grid-column: 3; grid-row: 2; }
+  .boost-btn { width: 84px; height: 74px; border-radius: 16px; border: none; background: var(--coral); color: #fff; font-weight: 900; font-size: 14px; box-shadow: 0 6px 0 var(--coral-d); }
+  .match-foot { text-align: center; padding-bottom: 16px; }
+  /* ---------- today's run ---------- */
+  .tr-header { padding: 16px 18px 4px; }
+  .tr-title { font-size: 22px; font-weight: 900; }
+  .tr-date { font-size: 12px; color: var(--muted); }
+  .tr-play { padding: 12px 18px; }
+  .tr-rewards { display: flex; gap: 8px; padding: 0 18px 12px; }
+  .reward { flex: 1; background: var(--white); border: 1px solid var(--line); border-radius: 14px; padding: 8px; text-align: center; }
+  .reward .pos { font-size: 14px; font-weight: 900; }
+  .reward .amt { font-size: 11px; color: var(--muted); }
+  .reward.top { border-color: var(--lemon); background: #fffbe8; }
+  .lb { flex: 1; overflow: hidden; margin: 0 18px 12px; background: var(--white); border: 1px solid var(--line); border-radius: 16px; }
+  .lb-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-bottom: 1px solid #f0ead9; font-size: 13px; }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-rank { width: 22px; font-weight: 900; color: var(--muted); }
+  .lb-rank.m { color: #7a5d00; }
+  .lb-wallet { flex: 1; color: var(--ink); font-weight: 600; }
+  .lb-score { font-weight: 900; }
+  .lb-verified { color: var(--teal-d); font-size: 12px; }
+  .lb-you { background: #fff3bd; }
+  .lb-more { text-align: center; padding: 8px; font-size: 12px; color: var(--muted); }
+  /* ---------- settlement ---------- */
+  .result-card { margin: 24px 18px 0; background: var(--white); border: 1px solid var(--line); border-radius: 20px; padding: 20px; text-align: center; }
+  .result-emoji { font-size: 40px; }
+  .result-title { font-size: 22px; font-weight: 900; margin: 6px 0 2px; }
+  .result-title.win { color: var(--teal-d); }
+  .result-title.lose { color: var(--coral-d); }
+  .result-sub { color: var(--muted); font-size: 13px; margin-bottom: 14px; }
+  .stats { display: flex; justify-content: center; gap: 18px; margin-bottom: 14px; }
+  .stat .v { font-size: 18px; font-weight: 900; }
+  .stat .k { font-size: 11px; color: var(--muted); }
+  .tx-row { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 12px; color: var(--teal-d); background: #d9f4f0; border-radius: 999px; padding: 7px 12px; margin-bottom: 14px; }
+  .result-actions { display: flex; flex-direction: column; gap: 10px; }
+  .settle-foot { text-align: center; margin: 16px 0; }
+  /* ---------- share ---------- */
+  .share-card { margin: 20px 18px 0; background: linear-gradient(160deg, #fff8e6, #fff 60%, #e6f7f3); border: 1px solid var(--line); border-radius: 22px; padding: 22px 18px; text-align: center; }
+  .share-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+  .share-badge { width: 46px; height: 46px; border-radius: 14px; background: var(--lemon); display: flex; align-items: center; justify-content: center; font-size: 24px; }
+  .share-wallet { font-size: 11px; color: var(--muted); }
+  .share-main { font-size: 15px; color: var(--muted); }
+  .share-rank { font-size: 52px; font-weight: 900; letter-spacing: -.03em; line-height: 1; margin: 8px 0 2px; }
+  .share-rank small { font-size: 22px; color: var(--muted); }
+  .share-of { font-size: 13px; color: var(--muted); margin-bottom: 16px; }
+  .share-verified { display: inline-flex; align-items: center; gap: 6px; background: var(--teal); color: #fff; border-radius: 999px; padding: 7px 14px; font-size: 13px; font-weight: 800; }
+  .share-foot { margin-top: 18px; font-size: 11px; color: var(--muted); }
+  .share-foot b { color: var(--coral); }
+  /* flow hint */
+  .flow { max-width: 1200px; margin-top: 28px; background: var(--white); border: 1px solid var(--line); border-radius: 16px; padding: 16px 20px; font-size: 13px; line-height: 1.7; }
+  .flow code { background: #f0ead9; border-radius: 6px; padding: 2px 7px; font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>Competitive Snake — Fresh Rink Wireframes</h1>
+<p class="sub">Design direction B · 5 screens · low-fi structure in final palette · working title placeholder: <b>SNAKE RINK</b> (naming open)</p>
+
+<div class="row">
+
+  <!-- 1 LOBBY -->
+  <div class="frame-wrap">
+    <p class="frame-label">1 · Lobby <span class="note">first-run: skip to Match automatically</span></p>
+    <div class="phone">
+      <div class="topbar">
+        <div class="wordmark">SNAKE <b>RINK</b></div>
+        <div class="wallet">•••• 7F3K · 0.0 NIM</div>
+      </div>
+      <div class="lobby-hero">
+        <div class="splash">🐍</div>
+        <h2>Ready to rink?</h2>
+        <p>60-second skill battles · verified scores · NIM rewards</p>
+      </div>
+      <div class="lobby-actions">
+        <button class="btn btn-primary btn-block">▶ Play (instant match)</button>
+        <div class="room-row">
+          <button class="btn btn-ghost">Room code</button>
+          <button class="btn btn-teal">Today's Run</button>
+        </div>
+      </div>
+      <div class="streak-strip">
+        <div class="streak-day on">M</div><div class="streak-day on">T</div>
+        <div class="streak-day on">W</div><div class="streak-day on">T</div>
+        <div class="streak-day today">F</div><div class="streak-day">S</div><div class="streak-day">S</div>
+      </div>
+      <div class="lobby-foot">
+        <div class="chip chip-lemon">🔥 4-day streak · +10 NIM at 7</div>
+        <p class="muted" style="margin-top:10px">1v1 · up to 4 in room · bots fill empty slots</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2 MATCH -->
+  <div class="frame-wrap">
+    <p class="frame-label">2 · Match (in-game) <span class="note">rotated landscape inside portrait container</span></p>
+    <div class="phone">
+      <div class="match-stage">
+        <div class="board"></div>
+        <div class="bounds"></div>
+        <!-- schematic snakes + pellets -->
+        <div class="snake snake-you" style="left:58px; top:210px; width:16px; height:16px;"></div>
+        <div class="snake snake-you" style="left:76px; top:210px; width:16px; height:16px;"></div>
+        <div class="snake snake-you" style="left:94px; top:210px; width:16px; height:16px;"></div>
+        <div class="snake snake-you" style="left:112px; top:210px; width:16px; height:16px;"></div>
+        <div class="snake snake-rival" style="left:230px; top:300px; width:16px; height:16px;"></div>
+        <div class="snake snake-rival" style="left:212px; top:300px; width:16px; height:16px;"></div>
+        <div class="snake snake-rival" style="left:194px; top:300px; width:16px; height:16px;"></div>
+        <div class="pellet" style="left:150px; top:150px; width:14px; height:14px;"></div>
+        <div class="pellet bounty" style="left:240px; top:170px; width:16px; height:16px;"></div>
+        <div class="pellet" style="left:120px; top:380px; width:14px; height:14px;"></div>
+        <div class="hud-overlay">
+          <div class="hud-pill" style="color:var(--teal-d)">YOU · 12</div>
+          <div class="hud-pill">⏱ 22s</div>
+          <div class="hud-pill" style="color:var(--coral-d)">RIVAL · 9</div>
+        </div>
+        <div class="hint-pill">hold BOOST to speed up!</div>
+      </div>
+      <div class="match-controls">
+        <div class="dpad">
+          <div class="d up">▲</div><div class="d l">◀</div><div class="d dwn">▼</div><div class="d r">▶</div>
+        </div>
+        <div class="chip chip-teal">3 alive</div>
+        <button class="boost-btn">BOOST</button>
+      </div>
+      <div class="match-foot muted">swipe anywhere on the board to steer</div>
+    </div>
+  </div>
+
+  <!-- 3 TODAY'S RUN -->
+  <div class="frame-wrap">
+    <p class="frame-label">3 · Today's Run <span class="note">same seed for everyone · best verified run counts</span></p>
+    <div class="phone">
+      <div class="tr-header">
+        <div class="tr-title">Today's Run</div>
+        <div class="tr-date">Fri Aug 21 · seed #4821 · identical arena for all</div>
+      </div>
+      <div class="tr-play">
+        <button class="btn btn-teal btn-block">▶ Play today's run</button>
+      </div>
+      <div class="tr-rewards">
+        <div class="reward top"><div class="pos">🥇 1st</div><div class="amt">30 NIM</div></div>
+        <div class="reward"><div class="pos">🥈 2nd</div><div class="amt">20 NIM</div></div>
+        <div class="reward"><div class="pos">🥉 3rd</div><div class="amt">10 NIM</div></div>
+      </div>
+      <div class="lb">
+        <div class="lb-row"><span class="lb-rank m">1</span><span class="lb-wallet">nimiq:qzw2•••8f</span><span class="lb-score">14,220</span><span class="lb-verified">✓ verified</span></div>
+        <div class="lb-row"><span class="lb-rank m">2</span><span class="lb-wallet">nimiq:q9x1•••3h</span><span class="lb-score">13,850</span><span class="lb-verified">✓ verified</span></div>
+        <div class="lb-row lb-you"><span class="lb-rank">3</span><span class="lb-wallet">you</span><span class="lb-score">12,400</span><span class="lb-verified">✓ verified</span></div>
+        <div class="lb-row"><span class="lb-rank">4</span><span class="lb-wallet">nimiq:q7aa•••1m</span><span class="lb-score">11,930</span><span class="lb-verified">✓ verified</span></div>
+        <div class="lb-row"><span class="lb-rank">5</span><span class="lb-wallet">nimiq:q4bd•••9c</span><span class="lb-score">11,610</span><span class="lb-verified">✓ verified</span></div>
+        <div class="lb-more">12 more players · ends 23:59 UTC</div>
+      </div>
+      <div class="lobby-foot">
+        <button class="btn btn-ghost btn-block">Share my rank</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4 SETTLEMENT -->
+  <div class="frame-wrap">
+    <p class="frame-label">4 · Settlement card <span class="note">post-match · reward + tx proof</span></p>
+    <div class="phone">
+      <div class="result-card">
+        <div class="result-emoji">🏆</div>
+        <div class="result-title win">You win!</div>
+        <div class="result-sub">vs nimiq:q9x1•••3h · 74s</div>
+        <div class="stats">
+          <div class="stat"><div class="v num">14</div><div class="k">score</div></div>
+          <div class="stat"><div class="v num">22</div><div class="k">length</div></div>
+          <div class="stat"><div class="v num">3</div><div class="k">boosts</div></div>
+        </div>
+        <div class="tx-row">✓ verified on-chain · <span class="num">tx 0x3f9a…c21e</span></div>
+        <div class="result-actions">
+          <button class="btn btn-primary btn-block">⚔ Rematch</button>
+          <div class="room-row">
+            <button class="btn btn-ghost">Lobby</button>
+            <button class="btn btn-teal">Share</button>
+          </div>
+        </div>
+      </div>
+      <div class="settle-foot">
+        <div class="chip chip-lemon">🏅 Today's Run: 3rd place · +10 NIM</div>
+        <p class="muted" style="margin-top:10px">Reward arrives within minutes · view in explorer</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5 SHARE -->
+  <div class="frame-wrap">
+    <p class="frame-label">5 · Share card <span class="note">generated image · Wordle-style</span></p>
+    <div class="phone">
+      <div class="share-card">
+        <div class="share-top">
+          <div class="share-badge">🐍</div>
+          <div class="share-wallet">@you · streak 4</div>
+        </div>
+        <div class="share-main">Today's Run</div>
+        <div class="share-rank">3<small>rd</small></div>
+        <div class="share-of">of 17 players · score 12,400</div>
+        <div class="share-verified">✓ server-verified · fair seed</div>
+        <div class="share-foot">Play 60-second snake battles with verified scores on <b>SNAKE RINK</b> · Nimiq Pay</div>
+      </div>
+      <div class="settle-foot">
+        <div class="muted">Auto-copies to clipboard · share image</div>
+        <p class="muted" style="margin-top:8px">channels: X / Telegram / WhatsApp</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="flow">
+  <b>Screen flow (locked):</b>
+  <code>Lobby</code> → <code>Match</code> → <code>Settlement</code> → <code>Share</code> (one tap) ·
+  <code>Lobby</code> → <code>Today's Run</code> → <code>Match</code> → <code>Settlement + rank</code> →
+  <code>Share</code>.
+  <b>First-run (scored onboarding &lt;60s):</b> splash → auto-start instant bot match → hint overlay in-match →
+  post-match card. Wallet connect is silent; sign-in / room codes / Today's Run / rewards are tier-2, never blocking
+  the first match.
+</div>
+</body>
+</html>

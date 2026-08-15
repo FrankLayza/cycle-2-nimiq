@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Competitive Snake — Match Visual Concepts</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #efe9df; font-family: system-ui, -apple-system, sans-serif; color: #2b2b33; padding: 32px 24px 64px; }
+  h1 { font-size: 20px; margin: 0 0 4px; }
+  .sub { color: #8a8578; font-size: 13px; margin-bottom: 26px; max-width: 900px; }
+  .row { display: flex; gap: 28px; flex-wrap: wrap; align-items: flex-start; }
+  .concept { width: 480px; max-width: 100%; }
+  .concept-tag { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .concept-tag .name { font-size: 15px; font-weight: 800; }
+  .concept-tag .tag { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; }
+  .stage { border-radius: 20px; overflow: hidden; box-shadow: 0 12px 32px rgba(43,43,51,.18); position: relative; aspect-ratio: 16/9; border: 6px solid #22252a; }
+  .stage svg { display: block; width: 100%; height: 100%; }
+  .hud { position: absolute; top: 10px; left: 12px; right: 12px; display: flex; justify-content: space-between; gap: 8px; pointer-events: none; }
+  .hud-pill { border-radius: 999px; padding: 5px 12px; font-size: 12px; font-weight: 800; backdrop-filter: blur(3px); }
+  .hud-pill.you { background: rgba(255,255,255,.92); color: #1f9d92; border: 1px solid rgba(31,157,146,.35); }
+  .hud-pill.rival { background: rgba(255,255,255,.92); color: #e85d50; border: 1px solid rgba(232,93,80,.35); }
+  .hud-pill.mid { background: rgba(43,43,51,.55); color: #fff; }
+  .hint { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); background: rgba(43,43,51,.82); color: #fff; border-radius: 999px; padding: 8px 16px; font-size: 12.5px; font-weight: 700; white-space: nowrap; pointer-events: none; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+  .notes { background: #fff; border: 1px solid #e4ded2; border-radius: 14px; padding: 12px 14px; font-size: 12.5px; line-height: 1.55; margin-top: 10px; }
+  .notes b { display: block; margin-bottom: 2px; font-size: 13px; }
+  .notes ul { margin: 4px 0 0; padding-left: 16px; }
+  .notes li { margin-bottom: 2px; }
+  .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+</style>
+</head>
+<body>
+<h1>Match Screen — Visual Concepts</h1>
+<p class="sub">Art direction per D23: green grass arena · designed 2D snake characters · high-fidelity Match UI. Three moods to choose from — never ship the first concept; this is your selection gate. (Phaser will render interpolation, particles and lighting on top of whichever board wins.)</p>
+
+<div class="row">
+
+<!-- ================= A · LAWN LEAGUE ================= -->
+<div class="concept">
+  <div class="concept-tag"><span class="name">A · Lawn League</span><span class="tag" style="background:#e4f3d9;color:#3f7a1f">sunny · glossy · playful</span></div>
+  <div class="stage">
+    <svg viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="grassA" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7ec85b"/><stop offset="1" stop-color="#57a93a"/></linearGradient>
+        <radialGradient id="vignA" cx="0.5" cy="0.45" r="0.75"><stop offset="0.6" stop-color="rgba(255,255,255,0)" /><stop offset="1" stop-color="rgba(43,70,20,.35)" /></radialGradient>
+        <linearGradient id="tealA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4ed9cb"/><stop offset="1" stop-color="#1f9d92"/></linearGradient>
+        <linearGradient id="coralA" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff9488"/><stop offset="1" stop-color="#e85d50"/></linearGradient>
+      </defs>
+      <rect width="800" height="450" fill="url(#grassA)"/>
+      <!-- mow stripes -->
+      <g fill="#65b843" opacity="0.45">
+        <rect x="0" y="0" width="100" height="450"/><rect x="200" y="0" width="100" height="450"/><rect x="400" y="0" width="100" height="450"/><rect x="600" y="0" width="100" height="450"/>
+      </g>
+      <!-- grass tufts -->
+      <g stroke="#4a9631" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.8">
+        <path d="M60,120 q3,-14 6,-20 M60,120 q-3,-12 -2,-18"/><path d="M300,90 q3,-12 5,-18 M300,90 q-3,-10 -1,-16"/>
+        <path d="M520,120 q3,-14 6,-20 M520,120 q-3,-12 -2,-18"/><path d="M720,80 q3,-12 5,-18 M720,80 q-3,-10 -1,-16"/>
+        <path d="M150,330 q3,-14 6,-20 M150,330 q-3,-12 -2,-18"/><path d="M640,360 q3,-12 5,-18 M640,360 q-3,-10 -1,-16"/>
+      </g>
+      <!-- daisies -->
+      <g>
+        <g transform="translate(210,180)"><circle cx="0" cy="-5" r="3" fill="#fff"/><circle cx="4.8" cy="-1.6" r="3" fill="#fff"/><circle cx="3" cy="4" r="3" fill="#fff"/><circle cx="-3" cy="4" r="3" fill="#fff"/><circle cx="-4.8" cy="-1.6" r="3" fill="#fff"/><circle r="2.6" fill="#ffd75e"/></g>
+        <g transform="translate(560,280)"><circle cx="0" cy="-5" r="3" fill="#fff"/><circle cx="4.8" cy="-1.6" r="3" fill="#fff"/><circle cx="3" cy="4" r="3" fill="#fff"/><circle cx="-3" cy="4" r="3" fill="#fff"/><circle cx="-4.8" cy="-1.6" r="3" fill="#fff"/><circle r="2.6" fill="#ffd75e"/></g>
+        <g transform="translate(700,200)"><circle cx="0" cy="-4" r="2.4" fill="#fff"/><circle cx="3.8" cy="-1.3" r="2.4" fill="#fff"/><circle cx="2.4" cy="3.2" r="2.4" fill="#fff"/><circle cx="-2.4" cy="3.2" r="2.4" fill="#fff"/><circle cx="-3.8" cy="-1.3" r="2.4" fill="#fff"/><circle r="2.1" fill="#ffd75e"/></g>
+      </g>
+      <!-- shrink boundary (painted line) -->
+      <rect x="46" y="46" width="708" height="358" rx="22" fill="none" stroke="#fff" stroke-width="4" stroke-dasharray="16 10" opacity="0.85"/>
+      <!-- pellets -->
+      <g transform="translate(250,250)">
+        <circle r="11" fill="#ff5a5a"/><circle cx="-3" cy="-3" r="4" fill="#ff8f8f" opacity="0.7"/>
+        <path d="M3,-10 q8,-10 14,-6" stroke="#5aa93a" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="13" cy="-8" r="3" fill="#5aa93a"/>
+      </g>
+      <g transform="translate(560,120)">
+        <path d="M0,-11 l3.4,7 7.6,1 -5.5,5.4 1.6,7.6 -7.1,-4 -7.1,4 1.6,-7.6 -5.5,-5.4 7.6,-1 z" fill="#ffd75e" stroke="#e6b93c" stroke-width="1.5"/>
+      </g>
+      <g transform="translate(180,150)">
+        <circle r="9" fill="#ff5a5a"/><circle cx="-2.5" cy="-2.5" r="3.2" fill="#ff8f8f" opacity="0.7"/>
+        <path d="M2.5,-8 q7,-8 12,-5" stroke="#5aa93a" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+      </g>
+      <!-- TEAL snake (you) -->
+      <g>
+        <path d="M110,350 Q180,370 240,330 T360,250 T430,235" fill="none" stroke="#15877d" stroke-width="27" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M110,350 Q180,370 240,330 T360,250 T430,235" fill="none" stroke="url(#tealA)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M110,350 Q180,370 240,330 T360,250 T430,235" fill="none" stroke="#2f8f86" stroke-width="22" stroke-linecap="round" stroke-dasharray="2 16" opacity="0.5"/>
+        <!-- head -->
+        <g transform="translate(430,235)">
+          <circle r="19" fill="#15877d"/><circle r="16" fill="url(#tealA)"/>
+          <circle cx="4" cy="-6" r="5.6" fill="#fff"/><circle cx="4" cy="-6" r="2.6" fill="#233"/>
+          <circle cx="11" cy="-2" r="4.6" fill="#fff" opacity="0.9"/><circle cx="11" cy="-2" r="2.1" fill="#233"/>
+          <path d="M15,-14 q6,-2 10,-9" stroke="#e85d50" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+          <circle cx="2" cy="10" r="3.4" fill="#1a6e66" opacity="0.6"/>
+        </g>
+      </g>
+      <!-- CORAL snake (rival) -->
+      <g>
+        <path d="M700,120 Q640,100 590,150 T500,220 T450,300" fill="none" stroke="#c94a3e" stroke-width="27" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M700,120 Q640,100 590,150 T500,220 T450,300" fill="none" stroke="url(#coralA)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M700,120 Q640,100 590,150 T500,220 T450,300" fill="none" stroke="#d8685c" stroke-width="22" stroke-linecap="round" stroke-dasharray="2 16" opacity="0.45"/>
+        <g transform="translate(450,300) rotate(150)">
+          <circle r="19" fill="#c94a3e"/><circle r="16" fill="url(#coralA)"/>
+          <circle cx="4" cy="-6" r="5.6" fill="#fff"/><circle cx="4" cy="-6" r="2.6" fill="#233"/>
+          <circle cx="11" cy="-2" r="4.6" fill="#fff" opacity="0.9"/><circle cx="11" cy="-2" r="2.1" fill="#233"/>
+          <path d="M15,-14 q6,-2 10,-9" stroke="#7a1f18" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+        </g>
+      </g>
+      <rect width="800" height="450" fill="url(#vignA)"/>
+    </svg>
+    <div class="hud">
+      <div class="hud-pill you">YOU · 12</div>
+      <div class="hud-pill mid">⏱ 22s</div>
+      <div class="hud-pill rival">RIVAL · 9</div>
+    </div>
+    <div class="hint">hold BOOST to speed up!</div>
+  </div>
+  <div class="notes">
+    <b>Art direction</b>
+    <ul>
+      <li>Sunny mowed lawn, <span class="sw" style="background:#7ec85b"></span>vibrant green + daisies, soft vignette</li>
+      <li>Glossy rounded snakes with big friendly eyes + tongue; white painted shrink line</li>
+      <li>Pellets = apples + golden stars; bouncy squash motion, confetti on win</li>
+      <li>Best balance: approachable + "real game" quality</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ================= B · MEADOW MATCH ================= -->
+<div class="concept">
+  <div class="concept-tag"><span class="name">B · Meadow Match</span><span class="tag" style="background:#e0efe0;color:#2f7d5a">soft · pastel · calm</span></div>
+  <div class="stage">
+    <svg viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="grassB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b3d8a8"/><stop offset="1" stop-color="#8fbf86"/></linearGradient>
+        <radialGradient id="vignB" cx="0.5" cy="0.45" r="0.8"><stop offset="0.65" stop-color="rgba(255,255,255,0)" /><stop offset="1" stop-color="rgba(70,110,60,.22)" /></radialGradient>
+        <linearGradient id="mintB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#9be0cf"/><stop offset="1" stop-color="#5cc4a8"/></linearGradient>
+        <linearGradient id="peachB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffc4a3"/><stop offset="1" stop-color="#f7956b"/></linearGradient>
+      </defs>
+      <rect width="800" height="450" fill="url(#grassB)"/>
+      <g fill="#a2cf96" opacity="0.5"><rect x="0" y="0" width="114" height="450"/><rect x="229" y="0" width="114" height="450"/><rect x="458" y="0" width="114" height="450"/><rect x="687" y="0" width="114" height="450"/></g>
+      <!-- wildflowers -->
+      <g>
+        <g transform="translate(180,120)"><circle r="2.4" fill="#c9a6e8"/><circle cx="4" cy="0" r="2.2" fill="#b98ad6"/></g>
+        <g transform="translate(600,150)"><circle r="2.4" fill="#ffc4a3"/><circle cx="4" cy="0" r="2.2" fill="#f2a381"/></g>
+        <g transform="translate(320,320)"><circle r="2.4" fill="#ffd75e"/><circle cx="4" cy="0" r="2.2" fill="#f0c44a"/></g>
+        <g transform="translate(700,330)"><circle r="2.2" fill="#c9a6e8"/></g>
+      </g>
+      <rect x="46" y="46" width="708" height="358" rx="22" fill="none" stroke="#fff" stroke-width="3.5" stroke-dasharray="14 12" opacity="0.7"/>
+      <!-- berries + peach -->
+      <g transform="translate(300,210)">
+        <circle cx="-6" cy="0" r="8" fill="#8f9ae6"/><circle cx="6" cy="0" r="8" fill="#7a86d9"/>
+        <circle cx="-8" cy="-2" r="2.6" fill="#aab3ef" opacity="0.8"/><circle cx="4" cy="-2" r="2.6" fill="#8f9ae6" opacity="0.8"/>
+      </g>
+      <g transform="translate(520,110)">
+        <path d="M0,8 a11,11 0 1,1 0.01,0 z" fill="#ffc4a3" stroke="#e39a70" stroke-width="2"/>
+        <path d="M0,4 a8,8 0 0,1 7,-7" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity="0.8"/>
+        <path d="M0,-10 q2,-4 6,-4" stroke="#7fb069" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+      </g>
+      <g transform="translate(180,280)"><circle r="7" fill="#7a86d9"/><circle cx="-2" cy="-2" r="2.4" fill="#8f9ae6" opacity="0.8"/></g>
+      <!-- mint snake -->
+      <g>
+        <path d="M120,340 Q200,360 260,320 T370,240 T440,230" fill="none" stroke="#3e9d84" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M120,340 Q200,360 260,320 T370,240 T440,230" fill="none" stroke="url(#mintB)" stroke-width="21" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M120,340 Q200,360 260,320 T370,240 T440,230" fill="none" stroke="#fff" stroke-width="21" stroke-linecap="round" stroke-dasharray="3 22" opacity="0.35"/>
+        <g transform="translate(440,230)">
+          <circle r="18" fill="#3e9d84"/><circle r="15" fill="url(#mintB)"/>
+          <circle cx="3" cy="-6" r="5.2" fill="#fff"/><circle cx="3" cy="-6" r="2.4" fill="#2b3b38"/>
+          <circle cx="10" cy="-2" r="4.2" fill="#fff" opacity="0.9"/><circle cx="10" cy="-2" r="2" fill="#2b3b38"/>
+          <path d="M13,-13 q5,-2 9,-8" stroke="#f7956b" stroke-width="3" fill="none" stroke-linecap="round"/>
+        </g>
+      </g>
+      <!-- peach snake -->
+      <g>
+        <path d="M690,130 Q630,110 585,160 T500,230 T455,300" fill="none" stroke="#d17f59" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M690,130 Q630,110 585,160 T500,230 T455,300" fill="none" stroke="url(#peachB)" stroke-width="21" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M690,130 Q630,110 585,160 T500,230 T455,300" fill="none" stroke="#fff" stroke-width="21" stroke-linecap="round" stroke-dasharray="3 22" opacity="0.35"/>
+        <g transform="translate(455,300) rotate(150)">
+          <circle r="18" fill="#d17f59"/><circle r="15" fill="url(#peachB)"/>
+          <circle cx="3" cy="-6" r="5.2" fill="#fff"/><circle cx="3" cy="-6" r="2.4" fill="#2b3b38"/>
+          <circle cx="10" cy="-2" r="4.2" fill="#fff" opacity="0.9"/><circle cx="10" cy="-2" r="2" fill="#2b3b38"/>
+          <path d="M13,-13 q5,-2 9,-8" stroke="#8a4a2c" stroke-width="3" fill="none" stroke-linecap="round"/>
+        </g>
+      </g>
+      <rect width="800" height="450" fill="url(#vignB)"/>
+    </svg>
+    <div class="hud">
+      <div class="hud-pill you">YOU · 12</div>
+      <div class="hud-pill mid">⏱ 22s</div>
+      <div class="hud-pill rival">RIVAL · 9</div>
+    </div>
+    <div class="hint">hold BOOST to speed up!</div>
+  </div>
+  <div class="notes">
+    <b>Art direction</b>
+    <ul>
+      <li>Soft pastel meadow, <span class="sw" style="background:#b3d8a8"></span>sage/mint grass, wildflower specks</li>
+      <li>Flat matte vector snakes (mint + peach), minimal gloss, calm energy</li>
+      <li>Pellets = berry clusters + peaches; gentle ease-in-out motion</li>
+      <li>Most trustworthy/calm — strongest "safe" first impression</li>
+    </ul>
+  </div>
+</div>
+
+<!-- ================= C · PICNIC PITCH ================= -->
+<div class="concept">
+  <div class="concept-tag"><span class="name">C · Picnic Pitch</span><span class="tag" style="background:#ffe9b8;color:#8a5a00">bold · cartoon · snacky</span></div>
+  <div class="stage">
+    <svg viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="grassC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#63c04f"/><stop offset="1" stop-color="#3d9232"/></linearGradient>
+        <radialGradient id="vignC" cx="0.5" cy="0.45" r="0.78"><stop offset="0.6" stop-color="rgba(255,255,255,0)" /><stop offset="1" stop-color="rgba(20,60,15,.3)" /></radialGradient>
+        <linearGradient id="tealC" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#26b7a4"/><stop offset="1" stop-color="#12876f"/></linearGradient>
+        <linearGradient id="coralC" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff6b5e"/><stop offset="1" stop-color="#e04040"/></linearGradient>
+      </defs>
+      <rect width="800" height="450" fill="url(#grassC)"/>
+      <g fill="#55b342" opacity="0.5"><rect x="0" y="0" width="100" height="450"/><rect x="200" y="0" width="100" height="450"/><rect x="400" y="0" width="100" height="450"/><rect x="600" y="0" width="100" height="450"/></g>
+      <!-- picnic blanket corner -->
+      <g transform="translate(0,320)">
+        <path d="M0,130 L130,0 L0,0 Z" fill="#ff6b5e"/>
+        <path d="M0,86 L86,0 L0,0 Z" fill="#fff"/>
+        <path d="M0,43 L43,0 L0,0 Z" fill="#ff6b5e"/>
+      </g>
+      <g transform="translate(670,0)">
+        <path d="M130,130 L130,0 L0,130 Z" fill="#ffd75e"/>
+        <path d="M130,86 L130,0 L44,0 Z" fill="#fff"/>
+        <path d="M130,43 L130,0 L87,0 Z" fill="#ffd75e"/>
+      </g>
+      <!-- confetti dots -->
+      <g fill="#ffd75e" opacity="0.85"><circle cx="220" cy="120" r="3"/><circle cx="560" cy="100" r="2.4"/><circle cx="420" cy="60" r="2.8"/><circle cx="300" cy="80" r="2"/></g>
+      <g fill="#ff8a80" opacity="0.85"><circle cx="180" cy="90" r="2.6"/><circle cx="640" cy="70" r="3"/><circle cx="480" cy="130" r="2.2"/></g>
+      <rect x="46" y="46" width="708" height="358" rx="22" fill="none" stroke="#fff" stroke-width="5" stroke-dasharray="12 9" opacity="0.9"/>
+      <!-- watermelon + cherries + lemon -->
+      <g transform="translate(280,230)">
+        <path d="M0,-16 a16,16 0 0,1 28,12 l-28,-6 z" fill="#5ec24a" stroke="#3d9232" stroke-width="2.5"/>
+        <path d="M2,-12 a13,13 0 0,1 23,10 l-23,-5 z" fill="#ff5f5f"/>
+        <circle cx="9" cy="-6" r="1.6" fill="#7a1f18"/><circle cx="16" cy="-1" r="1.6" fill="#7a1f18"/><circle cx="12" cy="2" r="1.6" fill="#7a1f18"/>
+      </g>
+      <g transform="translate(540,110)">
+        <circle cx="-7" cy="6" r="8.5" fill="#ff4d6d" stroke="#b3274a" stroke-width="2.5"/><circle cx="7" cy="6" r="8.5" fill="#ff4d6d" stroke="#b3274a" stroke-width="2.5"/>
+        <path d="M0,6 q0,-10 8,-16" stroke="#7fb069" stroke-width="3.4" fill="none" stroke-linecap="round"/>
+        <circle cx="2" cy="4" r="2" fill="#fff" opacity="0.7"/>
+      </g>
+      <g transform="translate(200,140)">
+        <path d="M0,8 a11,11 0 1,1 0.01,0 z" fill="#ffd75e" stroke="#e6a93c" stroke-width="2.4"/>
+        <path d="M0,-10 L0,-2 M-7,-8 L-4,-3 M7,-8 L4,-3" stroke="#e6a93c" stroke-width="2.6" stroke-linecap="round"/>
+      </g>
+      <!-- teal snake (bold outline) -->
+      <g>
+        <path d="M110,350 Q180,370 240,330 T360,250 T430,235" fill="none" stroke="#2b3a2b" stroke-width="29" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M110,350 Q180,370 240,330 T360,250 T430,235" fill="none" stroke="url(#tealC)" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M110,350 Q180,370 240,330 T360,250 T430,235" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 14" opacity="0.5"/>
+        <g transform="translate(430,235)">
+          <circle r="20" fill="#2b3a2b"/><circle r="17" fill="url(#tealC)"/>
+          <circle cx="4" cy="-6" r="6" fill="#fff"/><circle cx="4" cy="-6" r="2.8" fill="#1e2a1e"/>
+          <circle cx="11.5" cy="-2" r="5" fill="#fff" opacity="0.9"/><circle cx="11.5" cy="-2" r="2.3" fill="#1e2a1e"/>
+          <path d="M16,-15 q7,-2 11,-10" stroke="#ffd75e" stroke-width="3.6" fill="none" stroke-linecap="round"/>
+          <path d="M2,-13 q3,-2 5,-1" stroke="#2b3a2b" stroke-width="2.4" fill="none" stroke-linecap="round" opacity="0.6"/>
+        </g>
+      </g>
+      <!-- coral snake -->
+      <g>
+        <path d="M700,120 Q640,100 590,150 T500,220 T450,300" fill="none" stroke="#2b3a2b" stroke-width="29" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M700,120 Q640,100 590,150 T500,220 T450,300" fill="none" stroke="url(#coralC)" stroke-width="23" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M700,120 Q640,100 590,150 T500,220 T450,300" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 14" opacity="0.5"/>
+        <g transform="translate(450,300) rotate(150)">
+          <circle r="20" fill="#2b3a2b"/><circle r="17" fill="url(#coralC)"/>
+          <circle cx="4" cy="-6" r="6" fill="#fff"/><circle cx="4" cy="-6" r="2.8" fill="#1e2a1e"/>
+          <circle cx="11.5" cy="-2" r="5" fill="#fff" opacity="0.9"/><circle cx="11.5" cy="-2" r="2.3" fill="#1e2a1e"/>
+          <path d="M16,-15 q7,-2 11,-10" stroke="#ffd75e" stroke-width="3.6" fill="none" stroke-linecap="round"/>
+        </g>
+      </g>
+      <rect width="800" height="450" fill="url(#vignC)"/>
+    </svg>
+    <div class="hud">
+      <div class="hud-pill you">YOU · 12</div>
+      <div class="hud-pill mid">⏱ 22s</div>
+      <div class="hud-pill rival">RIVAL · 9</div>
+    </div>
+    <div class="hint">hold BOOST to speed up!</div>
+  </div>
+  <div class="notes">
+    <b>Art direction</b>
+    <ul>
+      <li>Saturated picnic-lawn, <span class="sw" style="background:#63c04f"></span>bold green + picnic-blanket corners, confetti</li>
+      <li>Comic-style snakes with thick dark outlines + white dashes, big expressions</li>
+      <li>Pellets = watermelon, cherries, lemon slices; snappy punchy motion</li>
+      <li>Most distinctive/memorable — biggest energy, best for demo video</li>
+    </ul>
+  </div>
+</div>
+
+</div>
+</body>
+</html>

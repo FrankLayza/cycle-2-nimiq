@@ -1,1 +1,36 @@
-project/
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Env & secrets — never commit real values
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Test & coverage
+coverage/
+
+# Vite / dev servers
+.vite/
+
+# Local SQLite databases (prod DB lives on the Railway volume)
+*.db
+*.db-wal
+*.db-shm
+/data/
+
+# Editor & OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json

@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Competitive Snake — Spike</title>
+<style>
+  html, body {
+    margin: 0; height: 100%; overflow: hidden; background: #0b0e14;
+    touch-action: none; -webkit-user-select: none; user-select: none;
+    font-family: system-ui, sans-serif; color: #e6edf3;
+  }
+  #stage { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+
+  /* 16:9 landscape world. In portrait, we rotate it 90deg to fill the portrait phone. */
+  #world {
+    position: relative;
+    width: min(100vw, calc(100vh * 16 / 9));
+    height: auto; aspect-ratio: 16 / 9;
+    background: #10141d; border-radius: 8px;
+    box-shadow: 0 0 40px rgba(0,0,0,.5);
+    display: flex; flex-direction: column;
+  }
+  @media (orientation: portrait) {
+    #world {
+      width: min(100vh, calc(100vw * 16 / 9));
+      height: auto;
+      transform: rotate(90deg);
+    }
+  }
+
+  /* HUD and controls OVERLAY the canvas (absolute), so the canvas owns the full 16:9 area
+     and never distorts. In-flow layout breaks input mapping — caught in the spike. */
+  #hud {
+    position: absolute; top: 0; left: 0; right: 0;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 4px 10px; font-size: 12px; background: rgba(22,27,38,.85); border-radius: 8px 8px 0 0;
+    gap: 8px; white-space: nowrap; pointer-events: none;
+  }
+  #hud b { color: #ffd75e; }
+  #hud .bot-score b { color: #ff6b6b; }
+
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+  #controls {
+    position: absolute; bottom: 0; left: 0; right: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 10px; gap: 10px; background: rgba(22,27,38,.85); border-radius: 0 0 8px 8px;
+  }
+  .pad { display: grid; grid-template-columns: repeat(3, 40px); grid-template-rows: repeat(2, 40px); gap: 4px; }
+  .pad button { background: #222a38; border: 1px solid #33415c; color: #e6edf3; font-size: 18px; border-radius: 6px; }
+  .pad button:active { background: #3b4b6b; }
+  .pad .up    { grid-column: 2; grid-row: 1; }
+  .pad .left  { grid-column: 1; grid-row: 2; }
+  .pad .down  { grid-column: 2; grid-row: 2; }
+  .pad .right { grid-column: 3; grid-row: 2; }
+
+  .boost { width: 88px; height: 72px; font-size: 15px; font-weight: 700; border-radius: 12px;
+    background: linear-gradient(#f0a33c, #c97a12); color: #221300; border: none; }
+  .boost:active { transform: scale(.95); }
+
+  #side { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+  .btn { background: #22304a; border: 1px solid #3d5070; color: #e6edf3; border-radius: 8px; padding: 6px 10px; font-size: 12px; cursor: pointer; }
+  .btn:active { background: #33507a; }
+
+  #status { font-size: 11px; color: #8b98a9; max-width: 190px; line-height: 1.35; overflow: hidden; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="world">
+    <div id="hud">
+      <span>YOU <b id="youScore">0</b></span>
+      <span class="bot-score">BOT <b id="botScore">0</b></span>
+      <span>⚔ <span id="alive">2</span></span>
+      <span>⏱ shrink <span id="shrink">30</span></span>
+      <span>seed <span id="seedLabel">—</span></span>
+    </div>
+    <canvas id="game" width="1280" height="720"></canvas>
+    <div id="controls">
+      <div class="pad">
+        <button class="up" data-dir="up">▲</button>
+        <button class="left" data-dir="left">◀</button>
+        <button class="down" data-dir="down">▼</button>
+        <button class="right" data-dir="right">▶</button>
+      </div>
+      <div id="side">
+        <button class="btn" id="play">▶ Play</button>
+        <button class="btn" id="verify">✓ Verify Replay</button>
+        <div id="status">SPIKE · portrait-rotated prototype. Swipe or d-pad to move, hold BOOST to burn tail.</div>
+      </div>
+      <button class="boost" id="boost">BOOST</button>
+    </div>
+  </div>
+</div>
+<script>
+/* Competitive Snake — SPIKE
+ * Verifies three risky pieces before committing to architecture:
+ *  1. Portrait CSS-rotation container + canvas input coordinate remapping
+ *  2. Deterministic simulation + replay verification (the anti-cheat core)
+ *  3. Two-snake tick model (head-on + body collision rules) with a bot opponent
+ * Pure JS, no dependencies, deterministic (seeded RNG, integer math only).
+ */
+'use strict';
+
+// ---------- Config ----------
+const GRID = 30;
+const TICK_MS = 110;          // base movement tick
+const BOOST_TICKS = 9;        // 1 tail segment burned per ~1s of boosting
+const SHRINK_EVERY = 100;     // shrink boundary every ~11s
+const MIN_BOUND = 12;         // stop shrinking at 12x12
+const BOUNTY_EVERY = 90;      // spawn a bounty pellet every ~10s
+const NORMAL_COUNT = 2;       // normal pellets kept on the board
+
+// ---------- Deterministic RNG (mulberry32) ----------
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+// ---------- Pure simulation ----------
+// state: { seed, tick, bounds:{x0,y0,x1,y1}, pellets:[{x,y,type,age}], snakes:[snake] }
+// snake: { id, cells:[{x,y}...] (head first), dir:{x,y}, boost, score, alive,
+//          pendingGrow, lastTurnTick, boostBurn }
+// actions per tick: [ {turn: null|'up'|'down'|'left'|'right', boost: bool}, ... ] (index = tick)
+
+function dirVec(d) {
+  return { up: { x: 0, y: -1 }, down: { x: 0, y: 1 }, left: { x: -1, y: 0 }, right: { x: 1, y: 0 } }[d] || { x: 0, y: 0 };
+}
+
+function makeState(seed) {
+  const rng = mulberry32(seed);
+  const half = Math.floor(GRID / 2);
+  const s = {
+    seed,
+    tick: 0,
+    bounds: { x0: 0, y0: 0, x1: GRID - 1, y1: GRID - 1 },
+    pellets: [],
+    snakes: [
+      { id: 0, cells: [{ x: half - 3, y: half }, { x: half - 4, y: half }, { x: half - 5, y: half }],
+        dir: { x: 1, y: 0 }, boost: false, score: 0, alive: true, pendingGrow: 0, lastTurnTick: -99, boostBurn: 0 },
+      { id: 1, cells: [{ x: half + 3, y: half }, { x: half + 4, y: half }, { x: half + 5, y: half }],
+        dir: { x: -1, y: 0 }, boost: false, score: 0, alive: true, pendingGrow: 0, lastTurnTick: -99, boostBurn: 0 }
+    ]
+  };
+  for (let i = 0; i < NORMAL_COUNT; i++) spawnPellet(s, rng, 0);
+  spawnPellet(s, rng, 1); // first bounty
+  return s;
+}
+
+function freeCells(s) {
+  const taken = new Set();
+  for (const sn of s.snakes) for (const c of sn.cells) taken.add(c.x + ',' + c.y);
+  for (const p of s.pellets) taken.add(p.x + ',' + p.y);
+  const cells = [];
+  for (let x = s.bounds.x0; x <= s.bounds.x1; x++)
+    for (let y = s.bounds.y0; y <= s.bounds.y1; y++)
+      if (!taken.has(x + ',' + y)) cells.push({ x, y });
+  return cells;
+}
+
+function spawnPellet(s, rng, type) {
+  const cells = freeCells(s);
+  if (!cells.length) return;
+  const c = cells[Math.floor(rng() * cells.length)];
+  s.pellets.push({ x: c.x, y: c.y, type, age: 0 });
+}
+
+function inBounds(s, x, y) { return x >= s.bounds.x0 && x <= s.bounds.x1 && y >= s.bounds.y0 && y <= s.bounds.y1; }
+
+function bodyCells(s, excludeId) {
+  const set = new Set();
+  for (const sn of s.snakes) if (sn.id !== excludeId && sn.alive) for (const c of sn.cells) set.add(c.x + ',' + c.y);
+  return set;
+}
+
+// Bot decision — greedy toward nearest pellet with wall/body penalties, seeded tiebreak.
+function botAction(s, rng) {
+  const me = s.snakes[1];
+  const opp = s.snakes[0];
+  let target = null, bestD = Infinity;
+  for (const p of s.pellets) {
+    const d = Math.abs(p.x - me.cells[0].x) + Math.abs(p.y - me.cells[0].y);
+    if (d < bestD) { bestD = d; target = p; }
+  }
+  const oppBody = bodyCells(s, me.id);
+  const myBody = new Set(me.cells.slice(1).map(c => c.x + ',' + c.y));
+  let best = null, bestScore = -Infinity;
+  const opts = [{ x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 }];
+  for (const d of opts) {
+    if (d.x === -me.dir.x && d.y === -me.dir.y) continue; // no reverse
+    const nx = me.cells[0].x + d.x, ny = me.cells[0].y + d.y;
+    let sc = rng() * 0.5;
+    if (!inBounds(s, nx, ny)) sc -= 100;
+    else {
+      if (myBody.has(nx + ',' + ny)) sc -= 80;
+      if (oppBody.has(nx + ',' + ny)) sc -= 90;
+      if (target) sc -= (Math.abs(nx - target.x) + Math.abs(ny - target.y)) * 1.2;
+      if (opp.alive) { // slight aggression: punish proximity to opponent head zone
+        const od = Math.abs(nx - opp.cells[0].x) + Math.abs(ny - opp.cells[0].y);
+        if (od <= 2) sc -= 6;
+      }
+    }
+    if (sc > bestScore) { bestScore = sc; best = d; }
+  }
+  const boost = me.boost ? true : (target && me.cells.length > 4 && bestD < 8);
+  return { turn: best ? ({ 0: 'up', 1: 'down', 2: 'left', 3: 'right' }[opts.indexOf(best)]) : null, boost };
+}
+
+// One tick of the whole sim. `getAction(s, rng, i, inputLog)` supplies each snake's action.
+function step(s, rng, getAction, inputLog) {
+  s.tick++;
+  const actions = s.snakes.map((sn, i) => getAction(s, rng, i, inputLog));
+  // ---- apply turns ----
+  for (let i = 0; i < s.snakes.length; i++) {
+    const sn = s.snakes[i], a = actions[i];
+    if (!sn.alive) continue;
+    if (a.boost) sn.boost = true; else sn.boost = false;
+    if (a.turn) {
+      const d = dirVec(a.turn);
+      if (!(d.x === -sn.dir.x && d.y === -sn.dir.y)) {
+        sn.dir = d;
+        sn.lastTurnTick = s.tick;
+      }
+    }
+  }
+  // ---- move (boost = 2 sub-steps) ----
+  for (const sn of s.snakes) {
+    if (!sn.alive) continue;
+    const steps = sn.boost ? 2 : 1;
+    for (let k = 0; k < steps; k++) {
+      const h = sn.cells[0];
+      const nx = h.x + sn.dir.x, ny = h.y + sn.dir.y;
+      if (!inBounds(s, nx, ny)) { sn.alive = false; break; }
+      sn.cells.unshift({ x: nx, y: ny });
+      if (sn.pendingGrow > 0) sn.pendingGrow--;
+      else sn.cells.pop();
+    }
+    if (sn.boost) {
+      sn.boostBurn++;
+      if (sn.boostBurn >= BOOST_TICKS) { sn.boostBurn = 0; if (sn.cells.length > 1) sn.cells.pop(); }
+    }
+  }
+  // ---- eating ----
+  for (const sn of s.snakes) {
+    if (!sn.alive) continue;
+    const h = sn.cells[0];
+    for (let i = s.pellets.length - 1; i >= 0; i--) {
+      const p = s.pellets[i];
+      if (p.x === h.x && p.y === h.y) {
+        if (p.type === 1) { sn.pendingGrow += 3; sn.score += 3; }
+        else { sn.pendingGrow += 1; sn.score += 1; }
+        s.pellets.splice(i, 1);
+      }
+    }
+  }
+  // ---- collisions ----
+  const heads = s.snakes.map(sn => sn.cells[0]);
+  // head-on
+  if (heads[0] && heads[1] && heads[0].x === heads[1].x && heads[0].y === heads[1].y) {
+    const a = s.snakes[0], b = s.snakes[1];
+    if (a.cells.length !== b.cells.length) {
+      (a.cells.length > b.cells.length ? b : a).alive = false;
+    } else {
+      // momentum rule: the snake that turned most recently loses; equal → both die
+      if (a.lastTurnTick === b.lastTurnTick) { a.alive = false; b.alive = false; }
+      else (a.lastTurnTick > b.lastTurnTick ? a : b).alive = false;
+    }
+  }
+  // head vs body
+  for (const sn of s.snakes) {
+    if (!sn.alive) continue;
+    const h = sn.cells[0];
+    for (const other of s.snakes) {
+      if (other === sn || !other.alive) continue;
+      for (const c of other.cells) {
+        if (c.x === h.x && c.y === h.y) {
+          sn.alive = false;
+          other.pendingGrow += 3;
+          other.score += 3;
+          break;
+        }
+      }
+      if (!sn.alive) break;
+    }
+  }
+  // self-collision
+  for (const sn of s.snakes) {
+    if (!sn.alive) continue;
+    const h = sn.cells[0];
+    for (let i = 1; i < sn.cells.length; i++)
+      if (sn.cells[i].x === h.x && sn.cells[i].y === h.y) { sn.alive = false; break; }
+  }
+  // ---- pellets: age + spawn ----
+  for (const p of s.pellets) p.age++;
+  s.pellets = s.pellets.filter(p => !(p.type === 1 && p.age > 150));
+  const normals = s.pellets.filter(p => p.type === 0).length;
+  for (let i = normals; i < NORMAL_COUNT; i++) spawnPellet(s, rng, 0);
+  const bounties = s.pellets.filter(p => p.type === 1).length;
+  if (bounties < 1 && s.tick % BOUNTY_EVERY === 0) spawnPellet(s, rng, 1);
+  // ---- shrink ----
+  if (s.tick % SHRINK_EVERY === 0) {
+    const b = s.bounds;
+    if (b.x1 - b.x0 > MIN_BOUND) { b.x0++; b.x1--; }
+    if (b.y1 - b.y0 > MIN_BOUND) { b.y0++; b.y1--; }
+  }
+  return s;
+}
+
+// Pure full-match runner: returns final state. Used by live mode and replay verification.
+function runMatch(seed, inputLog, maxTicks) {
+  const rng = mulberry32(seed);
+  const s = makeState(seed);
+  const log = inputLog || [];
+  const getAction = (state, r, i, _log) => {
+    if (i === 0) {
+      const a = _log[state.tick - 1] || { turn: null, boost: false };
+      return a;
+    }
+    return botAction(state, r);
+  };
+  while (s.tick < (maxTicks || 6000)) {
+    const alive = s.snakes.filter(sn => sn.alive).length;
+    if (alive <= 1) break;
+    step(s, rng, getAction, log);
+  }
+  return s;
+}
+
+// ---------- Live game (renders + records player input) ----------
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const W = canvas.width, H = canvas.height;
+const cellPx = Math.min(W, H) / GRID;
+const offX = (W - GRID * cellPx) / 2, offY = (H - GRID * cellPx) / 2;
+
+let live = null;
+let playerInput = [];   // recorded per-tick actions for the player
+let running = false;
+
+function portraitMode() { return window.matchMedia('(orientation: portrait)').matches; }
+
+// Screen (client) coords -> grid cell, compensating for the CSS 90deg rotation.
+function screenToCell(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  let nx, ny;
+  if (portraitMode()) {
+    const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+    const dx = clientX - cx, dy = clientY - cy;
+    // un-rotate: localX = dy, localY = -dx (rotate(90deg) mapping)
+    nx = (dy + rect.height / 2) / rect.height;
+    ny = (-dx + rect.width / 2) / rect.width;
+  } else {
+    nx = (clientX - rect.left) / rect.width;
+    ny = (clientY - rect.top) / rect.height;
+  }
+  const px = nx * W, py = ny * H;
+  return { x: Math.floor((px - offX) / cellPx), y: Math.floor((py - offY) / cellPx) };
+}
+
+// Convert a screen-space swipe vector to a game direction (inverse rotation applied).
+function swipeToDir(dx, dy) {
+  let gx, gy;
+  if (portraitMode()) { gx = dy; gy = -dx; } else { gx = dx; gy = dy; }
+  if (Math.abs(gx) < Math.abs(gy)) return gy < 0 ? 'up' : 'down';
+  return gx < 0 ? 'left' : 'right';
+}
+
+// ---------- Rendering ----------
+function draw() {
+  ctx.fillStyle = '#10141d';
+  ctx.fillRect(0, 0, W, H);
+  const s = live;
+  // bounds
+  ctx.strokeStyle = '#ffd75e';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(offX + s.bounds.x0 * cellPx, offY + s.bounds.y0 * cellPx,
+    (s.bounds.x1 - s.bounds.x0 + 1) * cellPx, (s.bounds.y1 - s.bounds.y0 + 1) * cellPx);
+  // pellets
+  for (const p of s.pellets) {
+    ctx.fillStyle = p.type === 1 ? '#ff9f43' : '#ffe66d';
+    ctx.beginPath();
+    ctx.arc(offX + (p.x + .5) * cellPx, offY + (p.y + .5) * cellPx, cellPx * .3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // snakes
+  const colors = ['#3ddc84', '#ff6b6b'];
+  for (const sn of s.snakes) {
+    if (!sn.alive) continue;
+    ctx.fillStyle = colors[sn.id];
+    for (const c of sn.cells) {
+      ctx.fillRect(offX + c.x * cellPx + 1, offY + c.y * cellPx + 1, cellPx - 2, cellPx - 2);
+    }
+    // head highlight
+    const h = sn.cells[0];
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(offX + h.x * cellPx + cellPx * .3, offY + h.y * cellPx + cellPx * .3, cellPx * .4, cellPx * .4);
+  }
+  // HUD
+  document.getElementById('youScore').textContent = s.snakes[0].score;
+  document.getElementById('botScore').textContent = s.snakes[1].score;
+  document.getElementById('alive').textContent = s.snakes.filter(x => x.alive).length;
+  document.getElementById('shrink').textContent = s.bounds.x1 - s.bounds.x0 + 1;
+}
+
+// ---------- Live loop ----------
+let interval = null;
+function startMatch(seed) {
+  if (interval) clearInterval(interval);
+  seed = seed || (Date.now() % 100000);
+  document.getElementById('seedLabel').textContent = seed;
+  playerInput = [];
+  live = makeState(seed);
+  running = true;
+  interval = setInterval(() => {
+    if (!running || !live) return;
+    const action = { turn: null, boost: live.snakes[0].boost };
+    playerInput.push(action);
+    const rng = mulberry32(live.seed);
+    const getAction = (state, r, i, _log) => {
+      if (i === 0) return _log[state.tick - 1] || { turn: null, boost: false };
+      return botAction(state, r);
+    };
+    step(live, rng, getAction, playerInput);
+    draw();
+    const alive = live.snakes.filter(x => x.alive).length;
+    if (alive <= 1) {
+      running = false;
+      clearInterval(interval);
+      interval = null;
+      draw();
+      const winner = live.snakes.find(x => x.alive);
+      setStatus(winner ? (winner.id === 0 ? '🏆 You win! Score ' + winner.score : '🤖 Bot wins.') : '💀 Draw');
+    }
+  }, TICK_MS);
+  draw();
+}
+
+// ---------- Replay verification (the anti-cheat core) ----------
+function verifyReplay(seed, inputLog) {
+  const a = runMatch(seed, inputLog);
+  const b = runMatch(seed, inputLog); // must be byte-identical
+  const sa = a.snakes, sb = b.snakes;
+  const same = a.tick === b.tick &&
+    sa.every((sn, i) => sn.score === sb[i].score && sn.alive === sb[i].alive &&
+      sn.cells.length === sb[i].cells.length &&
+      sn.cells[0].x === sb[i].cells[0].x && sn.cells[0].y === sb[i].cells[0].y);
+  return {
+    deterministic: same,
+    ticks: a.tick,
+    playerScore: sa[0].score,
+    botScore: sa[1].score,
+    playerAlive: sa[0].alive,
+    botAlive: sa[1].alive,
+    playerLen: sa[0].cells.length
+  };
+}
+
+function setStatus(msg) { document.getElementById('status').textContent = msg; }
+
+// ---------- Input wiring ----------
+const KEY_DIR = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
+
+function setPlayerTurn(d) {
+  if (live && running && playerInput.length) playerInput[playerInput.length - 1].turn = d;
+}
+
+document.querySelectorAll('.pad button').forEach(btn => {
+  btn.addEventListener('pointerdown', () => setPlayerTurn(btn.dataset.dir));
+});
+document.addEventListener('keydown', e => {
+  if (KEY_DIR[e.key]) { e.preventDefault(); setPlayerTurn(KEY_DIR[e.key]); }
+  if (e.key === ' ') e.preventDefault();
+});
+// swipe on canvas
+let swipeStart = null;
+canvas.addEventListener('pointerdown', e => { swipeStart = { x: e.clientX, y: e.clientY }; });
+canvas.addEventListener('pointerup', e => {
+  if (!swipeStart) return;
+  const dx = e.clientX - swipeStart.x, dy = e.clientY - swipeStart.y;
+  if (Math.abs(dx) + Math.abs(dy) > 24) setPlayerTurn(swipeToDir(dx, dy));
+  swipeStart = null;
+});
+// boost
+const boostBtn = document.getElementById('boost');
+boostBtn.addEventListener('pointerdown', () => {
+  if (live && running && playerInput.length) playerInput[playerInput.length - 1].boost = true;
+  live && (live.snakes[0].boost = true);
+});
+boostBtn.addEventListener('pointerup', () => { live && (live.snakes[0].boost = false); });
+boostBtn.addEventListener('pointerleave', () => { live && (live.snakes[0].boost = false); });
+
+document.getElementById('play').addEventListener('click', () => startMatch());
+document.getElementById('verify').addEventListener('click', () => {
+  const r = verifyReplay(live ? live.seed : 12345, playerInput.length ? playerInput : null);
+  const label = r.deterministic ? '✅ DETERMINISTIC — replay reproduces the match' : '❌ MISMATCH';
+  setStatus(label + ' · ' + r.ticks + ' ticks · you ' + r.playerScore + ' · bot ' + r.botScore +
+    (r.playerAlive ? ' (you survived)' : r.botAlive ? ' (bot survived)' : ' (draw)'));
+  document.getElementById('seedLabel').textContent = live ? live.seed : 12345;
+});
+
+// ---------- Test hooks (used by the agent preview checks) ----------
+window.__cellAt = screenToCell;
+window.__swipeToDir = swipeToDir;
+window.__portrait = portraitMode;
+window.__verifyReplay = verifyReplay;
+window.__runAuto = function (seed) {
+  const r = verifyReplay(seed || 424242, null);
+  return { deterministic: r.deterministic, ticks: r.ticks, playerScore: r.playerScore, botScore: r.botScore };
+};
+window.__startMatch = startMatch;
+window.__getState = function () {
+  return live ? { tick: live.tick, seed: live.seed, you: live.snakes[0].score, bot: live.snakes[1].score, alive: live.snakes.filter(s => s.alive).length } : null;
+};
+window.__startMatch();
+</script>
+</body>
+</html>
