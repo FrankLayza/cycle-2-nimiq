@@ -2,7 +2,7 @@
 
 **Handoff written:** 2026-08-15 · **Next session should start here.**
 
-Read, in order: `docs/AI_HANDOFF.md` → `docs/PROJECT_PROGRESS.md` → `COMPETITIVE_SNAKE_GAME.md` → `architecture/ARCHITECTURE.md` (as needed).
+Read, in order: `docs/AI_HANDOFF.md` → `docs/lifecycle/INDEX.md` → `docs/PROJECT_PROGRESS.md` → `COMPETITIVE_SNAKE_GAME.md` → `architecture/ARCHITECTURE.md` (as needed).
 
 ---
 

@@ -2,7 +2,7 @@
 
 **Updated:** 2026-08-15 · **Phase:** W1 scaffold (Build) · **Next milestone:** W2 — wallet init + PvP client wiring + real-device pass
 
-Source of truth: `COMPETITIVE_SNAKE_GAME.md` · Architecture: `architecture/ARCHITECTURE.md` · Handoff: `docs/AI_HANDOFF.md`
+Source of truth: `COMPETITIVE_SNAKE_GAME.md` · Architecture: `architecture/ARCHITECTURE.md` · Lifecycle: [`docs/lifecycle/INDEX.md`](./lifecycle/INDEX.md) · Handoff: `docs/AI_HANDOFF.md`
 
 ---
 

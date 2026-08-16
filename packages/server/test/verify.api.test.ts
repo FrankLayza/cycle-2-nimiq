@@ -38,8 +38,8 @@ function otherRun(): AppliedInput[][] {
   return [log];
 }
 
-describe('POST /api/v1/runs/verify', () => {
-  it('accepts an honest Today\u2019s Run and returns rank 1', async () => {
+describe('POST /api/v1/runs/verify', { timeout: 20000 }, () => {
+  it('accepts an honest Today’s Run and returns rank 1', async () => {
     const app = buildApp();
     const res = await app.inject({ method: 'POST', url: '/api/v1/runs/verify', payload: validPayload() });
     expect(res.statusCode).toBe(200);

@@ -10,7 +10,7 @@ import { registerRuns } from './api/runs.js';
 /** Fastify app with all REST routes — Colyseus attaches to the same http server in index.ts (D26). */
 export function buildApp() {
   const cfg = loadConfig();
-  const app = Fastify({ logger: false });
+  const app = Fastify({ logger: process.env.NODE_ENV !== 'test' });
   app.register(cors, { origin: cfg.allowedOrigins });
   registerHealth(app);
   registerRooms(app);

@@ -5,6 +5,7 @@ Wallet-powered identity + on-chain, replay-verified skill rewards. No betting �
 never holds player funds.
 
 Living project document (source of truth): [`COMPETITIVE_SNAKE_GAME.md`](./COMPETITIVE_SNAKE_GAME.md)
+· Lifecycle & Roadmap: [`docs/lifecycle/`](./docs/lifecycle/INDEX.md)
 · Architecture: [`architecture/ARCHITECTURE.md`](./architecture/ARCHITECTURE.md) · Spike: [`spike/`](./spike)
 
 ## Layout (pnpm workspaces)

@@ -16,8 +16,13 @@ from a team-seeded pool — **not** a betting product.
 
 1. `COMPETITIVE_SNAKE_GAME.md` — living project doc: concept, decisions (D1–D39), rewards, roadmap, risks.
 2. `architecture/ARCHITECTURE.md` — build blueprint (D25–D34).
-3. `docs/AI_HANDOFF.md` — where the last session ended and what's next.
-4. `docs/PROJECT_PROGRESS.md` — milestone status + success metrics.
+3. `docs/lifecycle/` — lifecycle breakdown for each phase:
+   - [`PHASE_1_SCAFFOLD.md`](docs/lifecycle/PHASE_1_SCAFFOLD.md) — W1 scaffold (Done ✅)
+   - [`PHASE_2_MULTIPLAYER_WALLET.md`](docs/lifecycle/PHASE_2_MULTIPLAYER_WALLET.md) — W2 PvP, Wallet & Daily Mode (Current 🟡)
+   - [`PHASE_3_REWARDS_EARLY_ACCESS.md`](docs/lifecycle/PHASE_3_REWARDS_EARLY_ACCESS.md) — W3 Automated Payouts & Early Access (Upcoming ⏳)
+   - [`PHASE_4_HARDENING_SUBMISSION.md`](docs/lifecycle/PHASE_4_HARDENING_SUBMISSION.md) — W4 Production & Submission (Upcoming ⏳)
+4. `docs/AI_HANDOFF.md` — where the last session ended and what's next.
+5. `docs/PROJECT_PROGRESS.md` — milestone status + success metrics.
 
 ## Repo layout
 
