@@ -6,6 +6,7 @@ import { registerHealth } from './api/health.js';
 import { registerRewards } from './api/rewards.js';
 import { registerRooms } from './api/rooms.js';
 import { registerRuns } from './api/runs.js';
+import { registerWallets } from './api/wallets.js';
 
 /** Fastify app with all REST routes — Colyseus attaches to the same http server in index.ts (D26). */
 export function buildApp() {
@@ -15,6 +16,7 @@ export function buildApp() {
   registerHealth(app);
   registerRooms(app);
   registerRuns(app);
+  registerWallets(app);
   registerRewards(app);
   registerAdmin(app);
   return app;
