@@ -80,7 +80,11 @@ export async function signWalletMessage(message: string): Promise<WalletSignatur
   if (!providerPromise && !(await initializeWallet())) throw new Error('Nimiq Pay provider is unavailable');
 
   try {
-    return await (await providerPromise!).sign(message);
+    const result = await (await providerPromise!).sign(message);
+    if (!('publicKey' in result) || !('signature' in result)) {
+      throw new Error('Nimiq wallet rejected the signature request');
+    }
+    return result;
   } catch (error) {
     lastError = toError(error);
     status = 'error';
