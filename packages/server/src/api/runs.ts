@@ -6,6 +6,7 @@ import { loadConfig } from '../config.js';
 import { getDb } from '../db/client.js';
 import { dailySeed, todayUtc } from '../services/seed.js';
 import { REWARD_TIERS } from './rewards.js';
+import { verifyNimiqAttestation } from '../services/attestation.js';
 
 export function logHashOf(inputs: AppliedInput[][]): string {
   return createHash('sha256').update(JSON.stringify(inputs)).digest('hex');
@@ -58,6 +59,9 @@ export function registerRuns(app: FastifyInstance): void {
     if (!runId || attestation.message !== attestationMessage(day, seed, reportedScore, runId)) {
       return reply.code(400).send({ error: 'attestation message does not match run payload' });
     }
+    if (!verifyNimiqAttestation(attestation as { message: string; publicKey: string; signature: string }, wallet)) {
+      return reply.code(401).send({ error: 'invalid Nimiq wallet signature' });
+    }
 
     const record: RunRecord = {
       id: runId || randomUUID(),
@@ -104,6 +108,18 @@ export function registerRuns(app: FastifyInstance): void {
     }
 
     const rank = rankFor(day, wallet);
+    db.prepare(
+      `INSERT INTO wallets (address, created_at, streak, last_play_date, last_run_at)
+       VALUES (?, ?, 1, ?, ?)
+       ON CONFLICT(address) DO UPDATE SET
+         streak = CASE
+           WHEN wallets.last_play_date = excluded.last_play_date THEN wallets.streak
+           WHEN wallets.last_play_date = date(excluded.last_play_date, '-1 day') THEN wallets.streak + 1
+           ELSE 1
+         END,
+         last_play_date = excluded.last_play_date,
+         last_run_at = excluded.last_run_at`,
+    ).run(wallet, record.attestedAt, day, record.attestedAt);
     return {
       valid: true,
       score: res.score,

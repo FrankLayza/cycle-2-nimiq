@@ -33,7 +33,7 @@ D35 (scaffold runtime: tsx source-mode, no build orchestration) · D36 (Colyseus
 1. **Public GitHub repo + MIT license + competition registration + Skool join** (W1 checklist, human action).
 2. **Railway + Pages deploy wiring** (`RAILWAY_DEPLOY_HOOK` secret, real deploy) — `.env.example` + workflows ready.
 3. **Nimiq tx-signing spike** (payout prerequisite) — `REWARD_SIGNER_KEY` wiring, testnet faucet (flagged in architecture §7).
-4. **W2:** Official Nimiq SDK is installed and locked. Provider initialization is silent, account access is explicit (`listAccounts()` requires confirmation), lobby identity and the typed `sign()` wrapper are implemented. Server wallet profile registration and daily leaderboard endpoints are implemented. Run verification now enforces canonical attestation metadata; cryptographic signature verification, client Today's Run submission, real-WebView validation, HUD identity, PvP completion, device QA, and Lawn League art remain.
+4. **W2:** Official Nimiq SDK is installed and locked. Provider initialization is silent, account access is explicit (`listAccounts()` requires confirmation), lobby identity and the typed `sign()` wrapper are implemented. Server wallet profile registration, daily leaderboard endpoints, and cryptographic Nimiq attestation verification are implemented. Verified runs now bind/update wallet streak profiles. Remaining: real-WebView validation, HUD identity, PvP completion, device QA, and Lawn League art.
 5. **Eslint** runs but is not yet wired into per-package type-aware checks (flat config, non-type-aware).
 
 ---

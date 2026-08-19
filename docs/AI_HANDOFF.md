@@ -21,7 +21,7 @@ Read, in order: `docs/AI_HANDOFF.md` → `docs/lifecycle/INDEX.md` → `docs/PRO
 ## Immediate next actions (W2)
 
 1. Nimiq wallet: provider lifecycle, explicit account access, fallback states, and `signWalletMessage()` are implemented. Validate them in Nimiq Pay and add the address to the HUD.
-2. Wallet/daily APIs: `/wallet/register`, `/wallet/:address`, and `/leaderboard/today` are implemented. `/runs/verify` now requires a canonical attestation object, but server-side Nimiq signature cryptographic verification still needs a compatible verifier package.
+2. Wallet/daily APIs: `/wallet/register`, `/wallet/:address`, and `/leaderboard/today` are implemented. `/runs/verify` now verifies the Nimiq public key/signature and binds verified runs to wallet streak profiles.
 3. Client PvP: consume the mirrored room state in Phaser, add interpolation, room creation/display, waiting/countdown/result/error handling, and verify on two devices.
 4. Today's Run client flow + signed attestation submission (server contract is ready; cryptographic verification remains).
 5. Real-device pass in Nimiq Pay: rotation/resize events, safe areas, touch (spike §12 flagged).

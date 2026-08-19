@@ -67,7 +67,8 @@ Dependency direction (enforced): `server → sim` · `client → sim`. Client an
 - **Wallet/daily APIs:** server exposes `/api/v1/wallet/register`, `/api/v1/wallet/:address`, and
   `/api/v1/leaderboard/today`. `/runs/verify` requires `{id, day, seed, reportedScore, attestation:
   {message, publicKey, signature}}`; the message must equal `snake-rink:today:{id}:{day}:{seed}:{score}`.
-  Cryptographic verification of the returned Nimiq signature is still pending a server verifier package.
+  Server verification now uses `@nimiq/core`; the public key must derive the submitted wallet address
+  and the signature must verify the canonical message. Verified runs create/update wallet streak profiles.
 - Today's Run attestation gate in `/runs/verify` is stubbed pending the tx-signing spike.
 - Room codes: 4-char Crockford base32 (no I/L/O/U).
 

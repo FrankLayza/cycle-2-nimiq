@@ -16,6 +16,7 @@
     "@colyseus/schema": "^3.0.76",
     "@colyseus/ws-transport": "^0.16.0",
     "@fastify/cors": "^11.3.0",
+    "@nimiq/core": "^2.20.0",
     "@snake/sim": "workspace:*",
     "better-sqlite3": "^13.0.3",
     "colyseus": "^0.16.0",
