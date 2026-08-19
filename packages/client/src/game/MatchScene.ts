@@ -1,99 +1,157 @@
 import Phaser from 'phaser';
 import { GRID_SIZE, TICK_MS } from '@snake/sim';
 import { interpolateSnapshots } from './renderState';
-import type { RenderSnapshot } from './renderState';
+import type { RenderCell, RenderSnapshot } from './renderState';
 
-/**
- * Render-only Phaser scene (match-scene-spec §1, M4): draws sim state every
- * tick, never writes back. Lawn League art (grass tiles, character snakes,
- * apples/stars) replaces these placeholders in W2.
- */
 export class MatchScene extends Phaser.Scene {
-  private g!: Phaser.GameObjects.Graphics;
+  private field!: Phaser.GameObjects.Graphics;
+  private actors!: Phaser.GameObjects.Graphics;
   private previous: RenderSnapshot | null = null;
   private current: RenderSnapshot | null = null;
   private currentReceivedAt = 0;
+  private decoratedSeed: number | null = null;
 
-  // 1280x720 canvas; the 30x30 arena is a centered 720x720 square.
   private readonly cellPx = 720 / GRID_SIZE;
   private readonly offX = (1280 - 720) / 2;
   private readonly offY = 0;
 
-  constructor() {
-    super('Match');
-  }
+  constructor() { super('Match'); }
 
   create() {
-    this.g = this.add.graphics();
+    this.cameras.main.setBackgroundColor('#dff0d5');
+    this.field = this.add.graphics();
+    this.actors = this.add.graphics();
   }
 
   submitSnapshot(snapshot: RenderSnapshot, receivedAt?: number) {
     const timestamp = receivedAt ?? this.game?.loop?.now ?? performance.now();
     if (this.current && snapshot.tick < this.current.tick) return;
-    if (this.current && snapshot.tick === this.current.tick) {
-      this.current = snapshot;
-      return;
-    }
+    if (this.current && snapshot.tick === this.current.tick) { this.current = snapshot; return; }
     this.previous = this.current;
     this.current = snapshot;
     this.currentReceivedAt = timestamp;
+    if (this.decoratedSeed !== snapshot.seed) this.drawField(snapshot.seed);
   }
 
   update(time: number) {
     if (!this.current) return;
     const alpha = (time - this.currentReceivedAt) / TICK_MS;
-    this.renderSnapshot(interpolateSnapshots(this.previous, this.current, alpha));
+    this.renderSnapshot(interpolateSnapshots(this.previous, this.current, alpha), time);
   }
 
-  private renderSnapshot(state: RenderSnapshot) {
-    const g = this.g;
+  private drawField(seed: number) {
+    this.decoratedSeed = seed;
+    const g = this.field;
     g.clear();
-
-    // Grass (placeholder green — Lawn League tile in W2).
-    g.fillStyle(0x8fd46a, 1);
-    g.fillRect(this.offX, this.offY, 720, 720);
-
-    // Shrink boundary — dashed "painted" line (solid for now).
-    g.lineStyle(3, 0xffffff, 0.9);
-    g.strokeRect(
-      this.offX + state.bounds.x0 * this.cellPx,
-      this.offY + state.bounds.y0 * this.cellPx,
-      (state.bounds.x1 - state.bounds.x0 + 1) * this.cellPx,
-      (state.bounds.y1 - state.bounds.y0 + 1) * this.cellPx,
-    );
-
-    // Pellets — lemon dots + golden bounty stars (apple/star art in W2).
-    for (const p of state.pellets) {
-      g.fillStyle(p.type === 1 ? 0xf2a93b : 0xf7e04d, 1);
-      g.fillCircle(
-        this.offX + (p.x + 0.5) * this.cellPx,
-        this.offY + (p.y + 0.5) * this.cellPx,
-        this.cellPx * 0.32,
-      );
+    g.fillStyle(0x75bd59, 1);
+    g.fillRoundedRect(this.offX, this.offY, 720, 720, 18);
+    for (let x = 0; x < GRID_SIZE; x++) {
+      g.fillStyle(x % 2 === 0 ? 0xffffff : 0x315f24, x % 2 === 0 ? 0.035 : 0.025);
+      g.fillRect(this.offX + x * this.cellPx, 0, this.cellPx, 720);
     }
 
-    // Snakes — coral (you) / teal (bot) rounded segments + head highlight.
-    for (const sn of state.snakes) {
-      if (!sn.alive) continue;
-      const color = Phaser.Display.Color.HexStringToColor(sn.color || (sn.id === 0 ? '#ff6b6b' : '#3ddc84'));
-      g.fillStyle(color.color, 1);
-      for (const c of sn.cells) {
-        g.fillRoundedRect(
-          this.offX + c.x * this.cellPx + 1,
-          this.offY + c.y * this.cellPx + 1,
-          this.cellPx - 2,
-          this.cellPx - 2,
-          4,
-        );
+    let value = seed || 1;
+    const random = () => { value = (value * 1664525 + 1013904223) >>> 0; return value / 0x100000000; };
+    for (let i = 0; i < 34; i++) {
+      const x = this.offX + 12 + random() * 696;
+      const y = 12 + random() * 696;
+      const radius = 1.5 + random() * 1.4;
+      g.fillStyle(0xffffff, 0.68);
+      for (let petal = 0; petal < 4; petal++) {
+        const angle = petal * Math.PI / 2;
+        g.fillCircle(x + Math.cos(angle) * 3, y + Math.sin(angle) * 3, radius);
       }
-      const h = sn.cells[0];
-      if (!h) continue;
-      g.fillStyle(0xffffff, 0.9);
-      g.fillCircle(
-        this.offX + (h.x + 0.35) * this.cellPx,
-        this.offY + (h.y + 0.35) * this.cellPx,
-        this.cellPx * 0.18,
-      );
+      g.fillStyle(0xf7e04d, 0.9);
+      g.fillCircle(x, y, 1.8);
+    }
+
+    g.lineStyle(3, 0x274c22, 0.18);
+    g.strokeRoundedRect(this.offX, 0, 720, 720, 18);
+  }
+
+  private renderSnapshot(state: RenderSnapshot, time: number) {
+    const g = this.actors;
+    g.clear();
+    this.drawBoundary(g, state);
+
+    for (const pellet of state.pellets) {
+      const x = this.offX + (pellet.x + 0.5) * this.cellPx;
+      const y = this.offY + (pellet.y + 0.5) * this.cellPx + Math.sin(time / 250 + pellet.x) * 1.5;
+      if (pellet.type === 1) this.drawStar(g, x, y, this.cellPx * 0.42);
+      else this.drawApple(g, x, y);
+    }
+
+    for (const snake of state.snakes) {
+      if (!snake.alive || !snake.cells[0]) continue;
+      const base = Phaser.Display.Color.HexStringToColor(snake.color || (snake.id === 0 ? '#ff6b6b' : '#3ddc84')).color;
+      const outline = snake.id === 0 ? 0xb93e4b : 0x18885d;
+      if (snake.boosting) this.drawBoostTrail(g, snake.cells, base);
+      for (let index = snake.cells.length - 1; index >= 1; index--) this.drawSegment(g, snake.cells[index], base, outline, index);
+      this.drawHead(g, snake.cells[0], snake.cells[1], base, outline, snake.id);
+    }
+  }
+
+  private drawBoundary(g: Phaser.GameObjects.Graphics, state: RenderSnapshot) {
+    const x = this.offX + state.bounds.x0 * this.cellPx;
+    const y = this.offY + state.bounds.y0 * this.cellPx;
+    const width = (state.bounds.x1 - state.bounds.x0 + 1) * this.cellPx;
+    const height = (state.bounds.y1 - state.bounds.y0 + 1) * this.cellPx;
+    g.lineStyle(4, 0xffffff, 0.88);
+    const dash = 18; const gap = 11;
+    for (let dx = 0; dx < width; dx += dash + gap) { g.lineBetween(x + dx, y, Math.min(x + dx + dash, x + width), y); g.lineBetween(x + dx, y + height, Math.min(x + dx + dash, x + width), y + height); }
+    for (let dy = 0; dy < height; dy += dash + gap) { g.lineBetween(x, y + dy, x, Math.min(y + dy + dash, y + height)); g.lineBetween(x + width, y + dy, x + width, Math.min(y + dy + dash, y + height)); }
+  }
+
+  private center(cell: RenderCell) { return { x: this.offX + (cell.x + 0.5) * this.cellPx, y: this.offY + (cell.y + 0.5) * this.cellPx }; }
+
+  private drawSegment(g: Phaser.GameObjects.Graphics, cell: RenderCell, base: number, outline: number, index: number) {
+    const { x, y } = this.center(cell);
+    const size = this.cellPx * 0.84;
+    g.fillStyle(outline, 1); g.fillRoundedRect(x - size / 2 - 1.5, y - size / 2 - 1.5, size + 3, size + 3, 8);
+    g.fillStyle(base, 1); g.fillRoundedRect(x - size / 2, y - size / 2, size, size, 7);
+    g.fillStyle(0xffffff, 0.2); g.fillRoundedRect(x - size * 0.28, y - size * 0.3, size * 0.46, size * 0.18, 4);
+    if (index % 3 === 0) { g.fillStyle(outline, 0.4); g.fillCircle(x + size * 0.2, y + size * 0.2, 2.2); }
+  }
+
+  private drawHead(g: Phaser.GameObjects.Graphics, head: RenderCell, neck: RenderCell | undefined, base: number, outline: number, id: number) {
+    const { x, y } = this.center(head);
+    const size = this.cellPx * 1.08;
+    const dx = neck ? head.x - neck.x : 1; const dy = neck ? head.y - neck.y : 0;
+    g.fillStyle(outline, 1); g.fillCircle(x, y, size * 0.53);
+    g.fillStyle(base, 1); g.fillCircle(x, y, size * 0.47);
+    g.fillStyle(0xffffff, 0.24); g.fillEllipse(x - size * 0.12, y - size * 0.18, size * 0.42, size * 0.2);
+    const sideX = dy * size * 0.19; const sideY = -dx * size * 0.19;
+    const forwardX = dx * size * 0.17; const forwardY = dy * size * 0.17;
+    for (const side of [-1, 1]) {
+      const eyeX = x + forwardX + sideX * side; const eyeY = y + forwardY + sideY * side;
+      g.fillStyle(0xffffff, 1); g.fillCircle(eyeX, eyeY, size * 0.13);
+      g.fillStyle(0x1f2937, 1); g.fillCircle(eyeX + dx * 2, eyeY + dy * 2, size * 0.058);
+      g.fillStyle(0xffffff, 0.9); g.fillCircle(eyeX + dx * 3 - 1, eyeY + dy * 3 - 1, 1.2);
+    }
+    if (id === 0) { g.fillStyle(0xffc0c8, 0.65); g.fillCircle(x - sideX * 1.4 - dx * 2, y - sideY * 1.4 - dy * 2, 2.2); }
+  }
+
+  private drawApple(g: Phaser.GameObjects.Graphics, x: number, y: number) {
+    g.fillStyle(0xb93e4b, 1); g.fillCircle(x, y + 1, this.cellPx * 0.28);
+    g.fillStyle(0xff6b6b, 1); g.fillCircle(x - 1.5, y - 1, this.cellPx * 0.23);
+    g.lineStyle(2, 0x5e3a21, 1); g.lineBetween(x, y - 5, x + 1, y - 10);
+    g.fillStyle(0x2f8c4e, 1); g.fillEllipse(x + 4, y - 8, 7, 4);
+    g.fillStyle(0xffffff, 0.55); g.fillCircle(x - 4, y - 4, 2);
+  }
+
+  private drawStar(g: Phaser.GameObjects.Graphics, x: number, y: number, radius: number) {
+    const points: Phaser.Geom.Point[] = [];
+    for (let i = 0; i < 10; i++) { const r = i % 2 === 0 ? radius : radius * 0.45; const a = -Math.PI / 2 + i * Math.PI / 5; points.push(new Phaser.Geom.Point(x + Math.cos(a) * r, y + Math.sin(a) * r)); }
+    g.fillStyle(0xd49b18, 1); g.fillPoints(points.map((point) => new Phaser.Geom.Point(point.x + 1.5, point.y + 2)), true);
+    g.fillStyle(0xf7e04d, 1); g.fillPoints(points, true);
+    g.fillStyle(0xffffff, 0.65); g.fillCircle(x - 2.5, y - 3.5, 2);
+  }
+
+  private drawBoostTrail(g: Phaser.GameObjects.Graphics, cells: RenderCell[], base: number) {
+    for (let index = 1; index < Math.min(cells.length, 6); index++) {
+      const { x, y } = this.center(cells[index]);
+      g.fillStyle(base, Math.max(0.08, 0.3 - index * 0.045));
+      g.fillCircle(x, y, this.cellPx * (0.4 - index * 0.035));
     }
   }
 }

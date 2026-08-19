@@ -59,6 +59,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
   const [countdown, setCountdown] = useState(0);
   const [error, setError] = useState('');
   const [result, setResult] = useState<ResultState | null>(null);
+  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -218,6 +219,18 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
     onRematch();
   };
 
+  const shareResult = async () => {
+    if (!result) return;
+    const text = `${result.outcome === 'win' ? 'I won' : result.outcome === 'draw' ? 'I drew' : 'I scored'} ${result.you.score.toLocaleString()} in Competitive Snake. Grow. Boost. Outplay.`;
+    setSharing(true);
+    try {
+      if (navigator.share) await navigator.share({ title: 'Competitive Snake', text });
+      else await navigator.clipboard.writeText(text);
+    } finally {
+      setSharing(false);
+    }
+  };
+
   const controlsEnabled = phase === 'playing';
   const phaseMessage =
     phase === 'connecting'
@@ -237,21 +250,24 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
         className="relative aspect-video w-[min(100vw,calc(100vh*16/9))] overflow-hidden rounded-[10px] bg-[#0b0e14] portrait:w-[min(100vh,calc(100vw*16/9))] portrait:rotate-90"
       >
         <div ref={hostRef} className="h-full w-full" />
-        <div className="pointer-events-none absolute left-1.5 right-1.5 top-1.5 flex items-center justify-between gap-2 whitespace-nowrap rounded-[10px] bg-ink/85 px-2.5 py-1.5 text-[13px] text-white">
-          <span>
-            YOU <b className="text-[#ffb3b3]">{hud.you}</b>
-          </span>
-          <span>
-            Alive {hud.alive} · shrink <b className="text-lemon">{hud.boundary}</b>
-          </span>
-          <span>
-            RIVAL <b className="text-teal">{hud.rival}</b>
-          </span>
+        <div className="pointer-events-none absolute left-3 right-3 top-3 flex items-start justify-between gap-2">
+          <div className="min-w-24 rounded-xl border border-white/20 bg-ink/85 px-3 py-2 text-left text-white shadow-sm">
+            <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-coral-soft">You</span>
+            <b className="block text-xl leading-none tabular-nums">{hud.you.toLocaleString()}</b>
+          </div>
+          <div className="rounded-full border border-white/20 bg-ink/75 px-3 py-2 text-center text-[11px] font-bold uppercase tracking-[0.12em] text-white shadow-sm">
+            <span className="block text-lemon">Field {hud.boundary}</span>
+            <span className="block text-white/70">{hud.alive} alive</span>
+          </div>
+          <div className="min-w-24 rounded-xl border border-white/20 bg-ink/75 px-3 py-2 text-right text-white shadow-sm">
+            <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-teal-soft">Rival</span>
+            <b className="block text-xl leading-none tabular-nums">{hud.rival.toLocaleString()}</b>
+          </div>
         </div>
 
         {phaseMessage && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-ink/35">
-            <div className="rounded-xl bg-white px-5 py-3 text-center text-lg font-bold text-ink shadow-[0_4px_8px_rgba(0,0,0,0.16)]">
+            <div className="rounded-2xl bg-white px-6 py-4 text-center text-lg font-bold text-ink shadow-sm">
               {phaseMessage}
             </div>
           </div>
@@ -266,10 +282,10 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
           </div>
         )}
 
-        <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between gap-2.5">
-          <div className="grid grid-cols-3 grid-rows-2 gap-[5px]">
+        <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-3">
+          <div className="grid grid-cols-3 grid-rows-2 gap-1.5 rounded-2xl border border-white/15 bg-ink/55 p-2">
             <button
-              className="col-start-2 row-start-1 min-h-11 min-w-11 rounded-lg border border-[#3d4a61] bg-[#2a3444] text-lg text-white active:bg-[#4a5b78] disabled:opacity-45"
+              className="control-button col-start-2 row-start-1 min-h-11 min-w-11 rounded-xl border border-white/20 bg-ink/80 text-lg text-white active:bg-ink disabled:opacity-45"
               disabled={!controlsEnabled}
               aria-label="Turn up"
               onPointerDown={() => setTurn('up')}
@@ -277,7 +293,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
               ▲
             </button>
             <button
-              className="col-start-1 row-start-2 min-h-11 min-w-11 rounded-lg border border-[#3d4a61] bg-[#2a3444] text-lg text-white active:bg-[#4a5b78] disabled:opacity-45"
+              className="control-button col-start-1 row-start-2 min-h-11 min-w-11 rounded-xl border border-white/20 bg-ink/80 text-lg text-white active:bg-ink disabled:opacity-45"
               disabled={!controlsEnabled}
               aria-label="Turn left"
               onPointerDown={() => setTurn('left')}
@@ -285,7 +301,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
               ◀
             </button>
             <button
-              className="col-start-2 row-start-2 min-h-11 min-w-11 rounded-lg border border-[#3d4a61] bg-[#2a3444] text-lg text-white active:bg-[#4a5b78] disabled:opacity-45"
+              className="control-button col-start-2 row-start-2 min-h-11 min-w-11 rounded-xl border border-white/20 bg-ink/80 text-lg text-white active:bg-ink disabled:opacity-45"
               disabled={!controlsEnabled}
               aria-label="Turn down"
               onPointerDown={() => setTurn('down')}
@@ -293,7 +309,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
               ▼
             </button>
             <button
-              className="col-start-3 row-start-2 min-h-11 min-w-11 rounded-lg border border-[#3d4a61] bg-[#2a3444] text-lg text-white active:bg-[#4a5b78] disabled:opacity-45"
+              className="control-button col-start-3 row-start-2 min-h-11 min-w-11 rounded-xl border border-white/20 bg-ink/80 text-lg text-white active:bg-ink disabled:opacity-45"
               disabled={!controlsEnabled}
               aria-label="Turn right"
               onPointerDown={() => setTurn('right')}
@@ -301,11 +317,11 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
               ▶
             </button>
           </div>
-          <div className="pointer-events-none absolute left-1/2 top-[52px] -translate-x-1/2 whitespace-nowrap rounded-full bg-white px-3.5 py-2 text-[13px] text-ink shadow-[0_2px_8px_rgba(0,0,0,0.15)]">
-            {hud.boosting ? 'Boosting: burning tail!' : 'Hold boost to speed up'}
+          <div className="pointer-events-none absolute bottom-[92px] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-ink/10 bg-white px-3.5 py-2 text-[12px] font-semibold text-ink shadow-sm">
+            {hud.boosting ? 'Boosting · tail burns' : 'Hold boost to speed up'}
           </div>
           <button
-            className="h-[76px] w-24 rounded-[14px] border-none bg-linear-to-b from-[#f2b04d] to-[#d18a1c] text-base font-bold text-[#2b1a00] active:scale-95 disabled:opacity-45"
+            className="control-button h-20 w-28 rounded-2xl border-2 border-[#f8d878] bg-lemon text-base font-extrabold text-ink shadow-sm active:scale-95 disabled:opacity-45"
             disabled={!controlsEnabled}
             onPointerDown={() => setBoost(true)}
             onPointerUp={() => setBoost(false)}
@@ -319,22 +335,20 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
 
       {result && (
         <div className="fixed inset-0 z-10 flex flex-col items-center justify-center gap-2.5 bg-cream/95 text-center">
-          <h2>{result.outcome === 'win' ? 'You win!' : result.outcome === 'loss' ? 'Rival wins.' : 'Draw'}</h2>
-          <p className="m-0 mb-2 text-muted">
-            Score {result.you.score} · Length {result.you.length}
-          </p>
+          <p className="m-0 text-xs font-bold uppercase tracking-[0.18em] text-muted">Match result</p>
+          <h2 className="m-0 text-4xl font-black">{result.outcome === 'win' ? 'You win' : result.outcome === 'loss' ? 'Rival wins' : 'Draw'}</h2>
+          <p className="m-0 text-lg font-bold tabular-nums">{result.you.score.toLocaleString()} score</p>
+          <p className="m-0 mb-2 text-sm text-muted">{result.you.length} segments · <span className="font-semibold text-teal">Score verified</span></p>
           <button
             className="w-[210px] cursor-pointer rounded-[14px] border-none bg-coral p-4 text-xl font-extrabold text-white shadow-[0_6px_0_var(--color-coral-dark)] active:translate-y-[3px] active:shadow-[0_3px_0_var(--color-coral-dark)]"
             onClick={handleRematch}
           >
             Rematch
           </button>
-          <button
-            className="cursor-pointer rounded-full border-[1.5px] border-teal bg-transparent px-4 py-2 text-[13px] text-ink"
-            onClick={onExit}
-          >
-            Lobby
-          </button>
+          <div className="flex gap-2">
+            <button className="min-h-11 rounded-full border border-line bg-card px-4 text-sm font-bold text-ink" onClick={() => void shareResult()} disabled={sharing}>{sharing ? 'Sharing…' : 'Share'}</button>
+            <button className="min-h-11 rounded-full border border-line bg-card px-4 text-sm font-bold text-ink" onClick={onExit}>Lobby</button>
+          </div>
         </div>
       )}
     </div>
