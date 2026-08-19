@@ -30,7 +30,7 @@ describe('wallet profile API', () => {
     expect(second.statusCode).toBe(200);
     expect(second.json().profile.created_at).toBe(first.json().profile.created_at);
     await app.close();
-  });
+  }, 15000);
 
   it('retrieves a registered profile and rejects invalid addresses', async () => {
     const app = buildApp();

@@ -25,11 +25,10 @@ afterAll(() => {
   rmSync(tmp, { recursive: true, force: true });
 });
 
-function validPayload(inputs: AppliedInput[][] = NOOP) {
+function validPayload(inputs: AppliedInput[][] = NOOP, id = 'test-run-1') {
   const seed = dailySeed(DAY, 'test-salt');
   const r = replay(seed, SIM_VERSION, inputs, 'solo');
   const score = r.snakes[0].score + r.snakes[0].length + r.ticks;
-  const id = 'test-run-1';
   return { id, day: DAY, seed, simVersion: SIM_VERSION, wallet: WALLET, inputs, reportedScore: score,
     attestation: { message: attestationMessage(DAY, seed, score, id), publicKey: 'fake-key', signature: 'fake-sig' } };
 }
@@ -56,7 +55,7 @@ describe('POST /api/v1/runs/verify', { timeout: 20000 }, () => {
 
   it('rejects a duplicate input log (D29 log-copy rejection)', async () => {
     const app = buildApp();
-    const payload = validPayload(otherRun()); // distinct log from the honest test above
+    const payload = validPayload(otherRun(), 'test-run-2'); // distinct id + log from the honest test above
     const first = await app.inject({ method: 'POST', url: '/api/v1/runs/verify', payload });
     expect(first.statusCode).toBe(200);
     const second = await app.inject({ method: 'POST', url: '/api/v1/runs/verify', payload });
@@ -88,7 +87,7 @@ describe('POST /api/v1/runs/verify', { timeout: 20000 }, () => {
   it('rejects a missing attestation (D34)', async () => {
     const app = buildApp();
     const payload = validPayload();
-    delete (payload as { attestation?: string }).attestation;
+    delete (payload as { attestation?: unknown }).attestation;
     const res = await app.inject({ method: 'POST', url: '/api/v1/runs/verify', payload });
     expect(res.statusCode).toBe(400);
     expect(res.json().error).toMatch(/attestation/);
