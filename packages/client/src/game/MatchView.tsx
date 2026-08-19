@@ -85,9 +85,11 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
     let sim: GameState = createRun(seed, 'bot', SIM_VERSION);
     let running = true;
     let disposed = false;
+    let connectTimer: ReturnType<typeof setTimeout> | null = null;
 
     if (mode === 'pvp' && roomCode) {
       setPhase('connecting');
+<<<<<<< HEAD
       const client = createMatchClient();
       void joinPvp(client, roomCode, wallet)
         .then((joined) => {
@@ -126,27 +128,70 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
                 you: { score: ownResult?.score ?? 0, length: ownResult?.length ?? 0 },
               });
               buzz(phase === 'finished' ? [14, 20, 14] : 8);
+=======
+      // React StrictMode mounts effects once, cleans them up, then mounts
+      // them again in development. Defer the network join so the probe
+      // connection is cancelled before it can occupy a room seat.
+      connectTimer = setTimeout(() => {
+        const client = createMatchClient();
+        void joinPvp(client, roomCode, wallet)
+          .then((joined) => {
+            if (disposed) {
+              void joined.leave();
+              return;
+>>>>>>> 187fbf7 (fix: fixed the snake rendering bug)
             }
-          };
+            roomRef.current = joined;
 
-          joined.onStateChange(applyState);
-          joined.onError((_code, message) => {
+            const applyState = (state: ClientMatchState) => {
+              scene().submitSnapshot(snapshotFromRoom(state));
+              const snakes = Array.from(state.snakes.values());
+              const own = snakes.find((snake) => snake.sessionId === joined.sessionId);
+              const rival = snakes.find((snake) => snake.sessionId !== joined.sessionId);
+              setHud({
+                you: own?.score ?? 0,
+                rival: rival?.score ?? 0,
+                alive: snakes.filter((snake) => snake.alive).length,
+                boundary: state.boundary,
+                seed: state.seed,
+                boosting: own?.boosting ?? false,
+              });
+              setCountdown(state.countdown);
+
+              if (state.status === 'lobby') setPhase('waiting');
+              if (state.status === 'countdown') setPhase('countdown');
+              if (state.status === 'playing') setPhase('playing');
+              if (state.status === 'finished' && state.resultJson) {
+                setPhase('finished');
+                const parsed = JSON.parse(state.resultJson) as MatchResultJson;
+                const ownSeat = own?.seat ?? 0;
+                const ownResult = parsed.snakes.find((snake) => snake.id === ownSeat);
+                setResult({
+                  outcome: outcomeFor(parsed.winner, ownSeat),
+                  you: { score: ownResult?.score ?? 0, length: ownResult?.length ?? 0 },
+                });
+              }
+            };
+
+            joined.onStateChange(applyState);
+            joined.onError((_code, message) => {
+              if (disposed) return;
+              setError(message || 'The match connection failed.');
+              setPhase('error');
+            });
+            joined.onLeave((code) => {
+              if (disposed || code === 1000) return;
+              setError('The match connection closed. Return to the lobby and try again.');
+              setPhase('error');
+            });
+            applyState(joined.state);
+          })
+          .catch(() => {
             if (disposed) return;
-            setError(message || 'The match connection failed.');
+            setError('Could not join this room. Check the code and try again.');
             setPhase('error');
           });
-          joined.onLeave((code) => {
-            if (disposed || code === 1000) return;
-            setError('The match connection closed. Return to the lobby and try again.');
-            setPhase('error');
-          });
-          applyState(joined.state);
-        })
-        .catch(() => {
-          if (disposed) return;
-          setError('Could not join this room. Check the code and try again.');
-          setPhase('error');
-        });
+      }, 0);
     }
 
     const interval = setInterval(() => {
@@ -206,6 +251,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
     return () => {
       disposed = true;
       clearInterval(interval);
+      if (connectTimer) clearTimeout(connectTimer);
       canvas?.removeEventListener('pointerdown', onDown);
       canvas?.removeEventListener('pointerup', onUp);
       void roomRef.current?.leave();

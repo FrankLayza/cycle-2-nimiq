@@ -14,14 +14,22 @@ Latest UI pass adds Nunito and motion tokens, render-only pellet particles, an a
 
 **W1 scaffold is done and green** (typecheck + 23 tests + client build pass). The game core is real: a deterministic shared sim with replay verification, an authoritative Colyseus match room proven by a two-client e2e, and a React/Phaser client that plays local bot matches in the rotated Nimiq-Pay-style viewport.
 
+<<<<<<< HEAD
 **Current milestone: W2 (Aug 24–30).** The Fresh Rink client UI, authoritative PvP snapshot rendering, responsive Today's Run flow, native result sharing, and code-split Lawn League Phaser renderer are implemented. Next priority is a real Nimiq Pay wallet/device pass and live data polish.
+=======
+**Current milestone: W2 (Aug 24–30).** Wallet SDK integration is implemented; room-code PvP is wired for deterministic 1v1. The client now defers PvP room joining past React StrictMode's development probe so a room creator cannot occupy both seats accidentally. Next priority is two-client device validation and the remaining Nimiq Pay pass.
+>>>>>>> 187fbf7 (fix: fixed the snake rendering bug)
 
 ## State at handoff
 
 - **Git:** wallet provider integration is committed as `ee974f7`; the SDK lockfile update and ongoing PvP client work are currently uncommitted.
 - **Unresolved (human):** public repo + registration + Skool; Railway/Pages deploy; reward signer key (testnet) + tx-signing lib choice; D34 attestation signing needs the Nimiq lib before `/runs/verify` can drop the stub gate.
+<<<<<<< HEAD
 - **Known shortcuts:** server runs via `tsx`; Colyseus 0.16 remains pinned with `defineTypes()` schemas; wallet discovery and rotated controls still need real-WebView validation; `todayScore` remains a documented placeholder; exact collision-loss reasons are not exposed by sim state and should not be guessed in UI.
 - **UI verification:** client typecheck and 2 client tests pass; production build is split into ~102 kB initial JS, ~324 kB gzip on-demand match chunk, and ~3.7 kB Today's Run chunk. Full repo verification is blocked by the existing Nimiq attestation type mismatch and verify API fixture failures.
+=======
+- **Known shortcuts:** server runs via `tsx`; Colyseus 0.16 remains pinned with `defineTypes()` schemas; PvP create/join-by-code is wired for deterministic 1v1, creator joins are deferred to avoid duplicate StrictMode connections, and dead final snakes remain visible; 3–4 player simulation is not yet implemented; Phaser art is placeholder; wallet discovery still needs real-WebView validation; `todayScore` remains a documented placeholder.
+>>>>>>> 187fbf7 (fix: fixed the snake rendering bug)
 
 ## Immediate next actions (W2)
 
