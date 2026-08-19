@@ -9,18 +9,17 @@
 ## 1. Objectives & Task Breakdown
 
 ### Task 2.1 — Nimiq Wallet Identity (`packages/client`)
-- [ ] Replace `packages/client/src/wallet/stub.ts` with real Nimiq web provider `init()`.
-- [ ] Implement silent, read-only wallet connection on app load (D7: never blocks the first free-play match).
-- [ ] Display truncated Nimiq address / avatar in the lobby and HUD.
-- [ ] Handle disconnected and fallback states gracefully.
+- [x] Add the official `@nimiq/mini-app-sdk` and initialize it with `init()` + `listAccounts()`.
+- [x] Silently initialize the provider on app load; request account access only from the explicit Connect action because `listAccounts()` requires native confirmation.
+- [~] Display the truncated Nimiq address in the lobby; HUD identity/avatar remains.
+- [x] Handle unavailable-provider, rejected, empty-account, and local-browser fallback states without blocking free play.
+- [x] Add a typed `signWalletMessage()` wrapper for rewarded-mode attestations using the SDK's `sign()` API.
+- [ ] Validate account discovery inside the real Nimiq Pay WebView on testnet.
 
 ### Task 2.2 — Client-Side Room-Code PvP Networking (`packages/client` & `packages/server`)
-- [ ] Wire `packages/client/src/net/client.ts` to connect to live Colyseus rooms (`joinOrCreate('match', { mode: 'pvp', code })`).
-- [ ] Add Lobby UI for:
-  - Generating / displaying 4-character room codes.
-  - Entering room codes to join friends.
-  - Deep-link support via `/?room=CODE` URL query parameter.
-- [ ] Mirror Colyseus server schema on the client and stream real-time inputs.
+- [~] `joinOrCreate('match', { mode: 'pvp', code, wallet })` and live input sending are wired; complete room lifecycle/error handling remains.
+- [~] Lobby can enter a 4-character code and reads `/?room=CODE`; room creation/display remains.
+- [~] Client schema mirror exists and inputs stream; consume authoritative state updates in Phaser.
 - [ ] Implement tick interpolation in Phaser to smoothly render remote snake movements.
 
 ### Task 2.3 — "Today's Run" Client Flow & Attestation (`packages/client` & `packages/server`)
@@ -54,3 +53,13 @@
 - [ ] Today's Run can be played, signed with the Nimiq wallet, submitted, and verified by the server.
 - [ ] UI and Phaser canvas adhere to the "Lawn League" aesthetic at a steady 60 FPS on mobile.
 - [ ] All unit, integration, and golden tests remain green (`pnpm test`).
+
+---
+
+## 3. Current Remaining Work (2026-08-19)
+
+1. Validate provider initialization, account permission, and message signing in Nimiq Pay; show the wallet identity in the match HUD.
+2. Finish room creation, connection errors, waiting/countdown/result states, and authoritative Phaser rendering.
+3. Add interpolation for remote movement and verify a complete two-device PvP match.
+4. Build Today's Run recording, wallet message signing, submission, and server-side signature verification.
+5. Replace placeholder game art, add settlement/leaderboard/share views, and complete mobile safe-area/touch QA.

@@ -36,12 +36,14 @@ packages/
 
 Dependency direction (enforced): `server → sim` · `client → sim`. Client and server never import each other.
 
-## Current state (2026-08-15)
+## Current state (2026-08-19)
 
 - **W1 scaffold DONE + committed.** Sim ported with golden hashes locked; Colyseus room with tick loop;
   React/Phaser client with rotated viewport + local bot play; 23 tests green incl. a 2-client PvP e2e.
-- **Next: W2** — Nimiq wallet `init()` identity, client-side room-code PvP wiring, real-device pass in
-  Nimiq Pay, Lawn League art. Full list in `docs/AI_HANDOFF.md`.
+- **W2 active.** The official `@nimiq/mini-app-sdk` is installed; silent `init()` + `listAccounts()`
+  identity and lobby display are implemented. Room-code join, schema mirror, deep-link input, and live
+  input sending are partially wired. Authoritative rendering/interpolation, room creation/lifecycle,
+  Today's Run signing, real-device validation, and Lawn League art remain.
 
 ## Conventions & gotchas
 
@@ -58,7 +60,10 @@ Dependency direction (enforced): `server → sim` · `client → sim`. Client an
   defined via `@theme`). Per `agents.md` Rule 1, all UI must use **Tailwind v4 canonical class names**
   (see the rename table in `agents.md`) — never v3 aliases like `shadow`, `rounded`, `ring`,
   `bg-gradient-to-*`, or `*-opacity-*`.
-- **Wallet is a stub** (`packages/client/src/wallet/stub.ts`) — real Nimiq provider `init()` is W2.
+- **Wallet integration:** `packages/client/src/wallet/provider.ts` uses the official Mini App SDK. App
+  load only initializes the provider; `listAccounts()` is called from explicit Connect because it opens
+  a native confirmation. A typed `signWalletMessage()` wrapper is ready for Today's Run. Wallet access
+  remains optional/non-blocking and still needs validation inside the Nimiq Pay WebView.
 - Today's Run attestation gate in `/runs/verify` is stubbed pending the tx-signing spike.
 - Room codes: 4-char Crockford base32 (no I/L/O/U).
 

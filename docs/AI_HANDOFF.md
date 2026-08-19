@@ -10,18 +10,18 @@ Read, in order: `docs/AI_HANDOFF.md` → `docs/lifecycle/INDEX.md` → `docs/PRO
 
 **W1 scaffold is done and green** (typecheck + 23 tests + client build pass). The game core is real: a deterministic shared sim with replay verification, an authoritative Colyseus match room proven by a two-client e2e, and a React/Phaser client that plays local bot matches in the rotated Nimiq-Pay-style viewport.
 
-**Next milestone: W2 (Aug 24–30).** First action: Nimiq wallet `init()` identity + room-code PvP client wiring + first real-device pass.
+**Current milestone: W2 (Aug 24–30).** Wallet SDK integration is implemented; room-code PvP is partially wired. Next priority is authoritative PvP rendering plus a real Nimiq Pay wallet/device pass.
 
 ## State at handoff
 
-- **Git:** 2 commits (`feat: setting up the project`, `docs: lock architecture + design state`). W1 scaffold is committed as the next commit (this session). Working tree clean after commit.
+- **Git:** wallet provider integration is committed as `ee974f7`; the SDK lockfile update and ongoing PvP client work are currently uncommitted.
 - **Unresolved (human):** public repo + registration + Skool; Railway/Pages deploy; reward signer key (testnet) + tx-signing lib choice; D34 attestation signing needs the Nimiq lib before `/runs/verify` can drop the stub gate.
-- **Known W1 shortcuts (by design, D35–D39):** server runs via `tsx` (no build step); Colyseus 0.16 pinned with `defineTypes()` schemas (`declare` fields + constructor assignment — do not switch to decorators); client PvP not yet wired (server side proven); Phaser scene is placeholder graphics (Lawn League art is W2); wallet is a stub; `todayScore` formula is a documented placeholder.
+- **Known shortcuts:** server runs via `tsx`; Colyseus 0.16 remains pinned with `defineTypes()` schemas; PvP joins and sends input but does not yet render authoritative room state; Phaser art is placeholder; wallet discovery still needs real-WebView validation; `todayScore` remains a documented placeholder.
 
 ## Immediate next actions (W2)
 
-1. Nimiq wallet: provider adapter now uses the official `@nimiq/mini-app-sdk` `init()` + `listAccounts()` flow; validate in Nimiq Pay and add signing later for Today's Run.
-2. Client PvP: wire `packages/client/src/net/client.ts` + Lobby "Room code" button to `joinOrCreate('match', { mode: 'pvp', code })` with a client schema mirror (the e2e in `packages/server/test/room.e2e.test.ts` is the reference); live input forwarding + interpolation (match-scene-spec §4).
+1. Nimiq wallet: provider lifecycle, explicit account access, fallback states, and `signWalletMessage()` are implemented. Validate them in Nimiq Pay and add the address to the HUD.
+2. Client PvP: consume the mirrored room state in Phaser, add interpolation, room creation/display, waiting/countdown/result/error handling, and verify on two devices.
 3. Today's Run client flow + signed attestation (needs tx-signing spike first).
 4. Real-device pass in Nimiq Pay: rotation/resize events, safe areas, touch (spike §12 flagged).
 5. Sim: `todayScore` formula tuning + verify; then bump `SIM_VERSION` if it changes (golden tests will force this).

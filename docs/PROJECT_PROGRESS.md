@@ -21,7 +21,7 @@ The monorepo is scaffolded and green. Verified locally (2026-08-15):
 | Deterministic sim (single source of truth) | `packages/sim` | ✅ Ported from spike + arena pre-derivation (D28), context-separated RNG, `SIM_VERSION` gate (D31), golden hashes locked |
 | REST + WS server (single port, D26) | `packages/server` | ✅ Fastify + Colyseus attach; `/health`, `/api/v1/run/today`, `/runs/verify`, `/rooms`, `/rewards/schedule`, `/admin/stats`; SQLite/WAL with the §6 schema |
 | Authoritative match room | `packages/server/src/rooms` | ✅ Tick loop (110ms), room codes (Crockford), bots free-play only (D5), input log capture (D27), rematch |
-| Client shell | `packages/client` | ✅ React lobby → local bot match; rotated landscape viewport + absolute overlay (D11); render-only Phaser scene; silent wallet stub |
+| Client shell | `packages/client` | 🟡 Local bot play works; official Nimiq Mini App SDK wallet initialization and partial room-code PvP wiring are implemented; authoritative PvP rendering remains |
 | CI / deploy workflows | `.github/workflows` | ✅ ci.yml (typecheck/lint/tests/build) + deploy.yml template (Railway webhook + static host) |
 
 ### Decisions made this milestone
@@ -33,7 +33,7 @@ D35 (scaffold runtime: tsx source-mode, no build orchestration) · D36 (Colyseus
 1. **Public GitHub repo + MIT license + competition registration + Skool join** (W1 checklist, human action).
 2. **Railway + Pages deploy wiring** (`RAILWAY_DEPLOY_HOOK` secret, real deploy) — `.env.example` + workflows ready.
 3. **Nimiq tx-signing spike** (payout prerequisite) — `REWARD_SIGNER_KEY` wiring, testnet faucet (flagged in architecture §7).
-4. **W2:** Nimiq provider `init()` + `listAccounts()` adapter is implemented; remaining work is room-code PvP **client** wiring (server side already e2e-verified), Today's Run client flow + attestation signing, real-device pass in Nimiq Pay, Lawn League art.
+4. **W2:** Official Nimiq SDK is installed and locked. Provider initialization is silent, account access is explicit (`listAccounts()` requires confirmation), lobby identity and the typed `sign()` wrapper are implemented. Remaining wallet work: real-WebView validation and HUD identity. PvP, Today's Run submission/verification, device QA, and Lawn League art remain.
 5. **Eslint** runs but is not yet wired into per-package type-aware checks (flat config, non-type-aware).
 
 ---

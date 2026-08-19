@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Lobby } from './components/Lobby';
 import { MatchView } from './game/MatchView';
-import { connectWallet, getWallet } from './wallet/provider';
+import { connectWallet, getWallet, initializeWallet } from './wallet/provider';
 import type { WalletIdentity } from './wallet/provider';
 
 export function App() {
@@ -11,7 +11,7 @@ export function App() {
   const [wallet, setWallet] = useState<WalletIdentity | null>(getWallet());
 
   useEffect(() => {
-    void connectWallet().then(setWallet);
+    void initializeWallet();
   }, []);
 
   const handleConnect = async () => {
