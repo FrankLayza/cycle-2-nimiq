@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
+import Phaser from 'phaser';
 import { SIM_VERSION, TICK_MS, createRun, isTerminal, step, todayScore } from '@snake/sim';
 import type { AppliedInput, Dir, GameState } from '@snake/sim';
 import { signWalletMessage } from '../wallet/provider';
+import { MatchScene } from '../game/MatchScene';
+import { snapshotFromGame } from '../game/renderState';
 
 interface Props { wallet: { address: string } | null; onExit: () => void }
 type Phase = 'loading' | 'ready' | 'playing' | 'signing' | 'submitting' | 'verified' | 'error';
@@ -24,6 +27,8 @@ export function TodayRunView({ wallet, onExit }: Props) {
   const pending = useRef<AppliedInput>({ turn: null, boost: false });
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const runId = useRef(crypto.randomUUID());
+  const fieldHost = useRef<HTMLDivElement | null>(null);
+  const phaserGame = useRef<Phaser.Game | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,6 +58,21 @@ export function TodayRunView({ wallet, onExit }: Props) {
     }, TICK_MS);
     return () => window.clearInterval(timer);
   }, [phase]);
+
+  useEffect(() => {
+    if (phase !== 'playing' || !fieldHost.current || phaserGame.current) return;
+    const game = new Phaser.Game({ type: Phaser.AUTO, parent: fieldHost.current, width: 1280, height: 720, backgroundColor: '#8fd46a', scene: [MatchScene] });
+    phaserGame.current = game;
+    return () => { game.destroy(true); phaserGame.current = null; };
+  }, [phase]);
+
+  useEffect(() => {
+    const game = phaserGame.current;
+    if (!game || !state) return;
+    const submit = () => (game.scene.getScene('Match') as MatchScene).submitSnapshot(snapshotFromGame(state));
+    if (game.scene.isActive('Match')) submit();
+    else window.setTimeout(submit, 0);
+  }, [state]);
 
   const finish = async () => {
     if (!challenge || !state || !wallet) { setError('Connect your Nimiq wallet to verify this run.'); setPhase('error'); return; }
@@ -99,13 +119,7 @@ export function TodayRunView({ wallet, onExit }: Props) {
         </header>
 
         <section className="relative min-h-0 flex-1 overflow-hidden rounded-2xl border-4 border-white/15 bg-grass shadow-sm" onPointerDown={(event) => { swipeStart.current = { x: event.clientX, y: event.clientY }; }} onPointerUp={(event) => finishSwipe(event.clientX, event.clientY)} onPointerCancel={() => { swipeStart.current = null; }}>
-          <div className="grid h-full w-full grid-cols-30 grid-rows-30 gap-px bg-grass p-1.5">
-            {Array.from({ length: 900 }, (_, index) => {
-              const x = index % 30; const y = Math.floor(index / 30);
-              const segment = snake?.cells.findIndex((cell) => cell.x === x && cell.y === y) ?? -1;
-              return <span key={index} className={segment === 0 ? 'rounded-full bg-coral ring-2 ring-white' : segment > 0 ? 'rounded-xs bg-coral' : 'bg-grass-light'} />;
-            })}
-          </div>
+          <div ref={fieldHost} id="world" className="h-full w-full" />
           {!terminal && <div className="run-hint pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-white/90 px-3 py-2 text-xs font-bold text-ink shadow-xs">Swipe or use the controls</div>}
         </section>
 

@@ -2,6 +2,7 @@
 
 /* Fresh Rink palette (D21) — bright, friendly, trustworthy. No neon/dark-crypto. */
 @theme {
+  --font-sans: 'Nunito', ui-sans-serif, system-ui, sans-serif;
   --color-cream: #f7f5f0;
   --color-ink: #1f2937;
   --color-teal: #3ddc84;
@@ -34,7 +35,7 @@
     overflow: hidden;
     background-color: var(--color-cream);
     color: var(--color-ink);
-    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-family: var(--font-sans);
     touch-action: none;
     user-select: none;
     -webkit-user-select: none;
@@ -48,9 +49,19 @@
   height: 100%;
 }
 
+:root {
+  --ease-pop: cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+}
+
 .control-button {
   touch-action: manipulation;
   transition: transform 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.control-button:active:not(:disabled) {
+  transform: translateY(4px);
 }
 
 .snake-mark {
@@ -66,6 +77,24 @@
 .snake-mark-teal { background: var(--color-teal); transform: rotate(12deg) translateY(-12px); }
 .pickup-mark { width: 18px; height: 18px; border-radius: 50%; background: var(--color-lemon); box-shadow: 0 3px 0 #d6be28; }
 
+.lobby-character { position: relative; overflow: hidden; }
+.lobby-character .pickup-mark { position: absolute; left: 50%; top: 45%; }
+.character-snake { position: absolute; display: flex; align-items: center; animation: character-breathe 2.4s var(--ease-in-out) infinite; }
+.character-snake i, .character-snake b { display: block; width: 28px; height: 28px; margin-left: -5px; border-radius: 50%; box-shadow: inset 0 5px 0 rgb(255 255 255 / 24%); }
+.character-snake b { position: relative; width: 36px; height: 36px; }
+.character-snake b span { position: absolute; top: 8px; width: 8px; height: 10px; border-radius: 50%; background: white; }
+.character-snake b span:first-child { left: 8px; }
+.character-snake b span:last-child { right: 8px; }
+.character-snake-coral { left: 20px; bottom: 18px; transform: rotate(-8deg); }
+.character-snake-coral i, .character-snake-coral b { background: var(--color-coral); }
+.character-snake-teal { right: 15px; top: 18px; flex-direction: row-reverse; animation-delay: -1.2s; }
+.character-snake-teal i, .character-snake-teal b { background: var(--color-teal); }
+
+@keyframes character-breathe {
+  0%, 100% { translate: 0 0; scale: 1; }
+  50% { translate: 0 -3px; scale: 1.02; }
+}
+
 .screen-enter {
   animation: screen-enter 320ms ease-out both;
 }
@@ -73,6 +102,12 @@
 .status-pop {
   animation: status-pop 360ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
 }
+
+.result-hero { animation: result-hero 500ms var(--ease-pop) both; }
+.result-score { animation: result-rise 500ms var(--ease-out) 180ms both; }
+.result-detail { animation: result-rise 500ms var(--ease-out) 300ms both; }
+@keyframes result-hero { from { opacity: 0; transform: scale(.78); } to { opacity: 1; transform: scale(1); } }
+@keyframes result-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 
 .run-hint {
   animation: hint-settle 420ms ease-out 300ms both;
@@ -131,4 +166,7 @@ input:focus-visible {
   .loading-snake {
     animation: none;
   }
+
+  .character-snake { animation: none; }
+  .result-hero, .result-score, .result-detail { animation: none; }
 }

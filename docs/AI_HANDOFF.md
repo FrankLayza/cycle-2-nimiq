@@ -8,6 +8,8 @@ Read, in order: `docs/AI_HANDOFF.md` → `docs/lifecycle/INDEX.md` → `docs/PRO
 
 ## Where we are
 
+Latest UI pass adds Nunito and motion tokens, render-only pellet particles, an animated lobby character, a frosted match HUD with timer/shrink readout, and shared Phaser rendering for Today's Run. Verification is currently blocked by Node EPERM resolving `C:\\Users\\USER` in this environment.
+
 **W1 scaffold is done and green** (typecheck + 23 tests + client build pass). The game core is real: a deterministic shared sim with replay verification, an authoritative Colyseus match room proven by a two-client e2e, and a React/Phaser client that plays local bot matches in the rotated Nimiq-Pay-style viewport.
 
 **Current milestone: W2 (Aug 24–30).** The Fresh Rink client UI, authoritative PvP snapshot rendering, responsive Today's Run flow, native result sharing, and code-split Lawn League Phaser renderer are implemented. Next priority is a real Nimiq Pay wallet/device pass and live data polish.

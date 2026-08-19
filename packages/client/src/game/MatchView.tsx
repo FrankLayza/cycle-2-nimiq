@@ -9,6 +9,10 @@ import { swipeToDir } from './input';
 import { createMatchClient, joinPvp } from '../net/client';
 import type { ClientMatchState } from '../net/client';
 
+function buzz(pattern: number | number[]) {
+  if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(pattern);
+}
+
 interface Props {
   onExit: () => void;
   onRematch: () => void;
@@ -24,6 +28,7 @@ interface HudState {
   boundary: number;
   seed: number;
   boosting: boolean;
+  tick: number;
 }
 
 interface ResultState {
@@ -54,6 +59,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
     boundary: 30,
     seed: 0,
     boosting: false,
+    tick: 0,
   });
   const [phase, setPhase] = useState<MatchPhase>(mode === 'pvp' ? 'connecting' : 'playing');
   const [countdown, setCountdown] = useState(0);
@@ -102,6 +108,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
               boundary: state.boundary,
               seed: state.seed,
               boosting: own?.boosting ?? false,
+              tick: state.tick,
             });
             setCountdown(state.countdown);
 
@@ -113,10 +120,11 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
               const parsed = JSON.parse(state.resultJson) as MatchResultJson;
               const ownSeat = own?.seat ?? 0;
               const ownResult = parsed.snakes.find((snake) => snake.id === ownSeat);
-              setResult({
+            setResult({
                 outcome: outcomeFor(parsed.winner, ownSeat),
                 you: { score: ownResult?.score ?? 0, length: ownResult?.length ?? 0 },
               });
+              buzz(phase === 'finished' ? [14, 20, 14] : 8);
             }
           };
 
@@ -164,6 +172,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
         boundary: sim.bounds.x1 - sim.bounds.x0 + 1,
         seed,
         boosting: sim.snakes[0].boost,
+        tick: sim.tick,
       });
       if (isTerminal(sim)) {
         running = false;
@@ -172,6 +181,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
           outcome: outcomeFor(winnerOf(sim), 0),
           you: { score: sim.snakes[0].score, length: sim.snakes[0].cells.length },
         });
+        buzz(8);
       }
     }, TICK_MS);
 
@@ -232,6 +242,9 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
   };
 
   const controlsEnabled = phase === 'playing';
+  const elapsedSeconds = Math.floor((hud.tick * TICK_MS) / 1000);
+  const matchClock = `${Math.floor(elapsedSeconds / 60)}:${String(elapsedSeconds % 60).padStart(2, '0')}`;
+  const shrinkCountdown = Math.max(0, 10 - (elapsedSeconds % 10));
   const phaseMessage =
     phase === 'connecting'
       ? 'Connecting to room...'
@@ -251,17 +264,17 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
       >
         <div ref={hostRef} className="h-full w-full" />
         <div className="pointer-events-none absolute left-3 right-3 top-3 flex items-start justify-between gap-2">
-          <div className="min-w-24 rounded-xl border border-white/20 bg-ink/85 px-3 py-2 text-left text-white shadow-sm">
-            <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-coral-soft">You</span>
-            <b className="block text-xl leading-none tabular-nums">{hud.you.toLocaleString()}</b>
+          <div className="min-w-24 rounded-full border border-white/70 bg-cream/90 px-4 py-2 text-left text-ink shadow-xs">
+            <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-coral-dark">You</span>
+            <b className="block text-2xl leading-none tabular-nums">{hud.you.toLocaleString()}</b>
           </div>
-          <div className="rounded-full border border-white/20 bg-ink/75 px-3 py-2 text-center text-[11px] font-bold uppercase tracking-[0.12em] text-white shadow-sm">
-            <span className="block text-lemon">Field {hud.boundary}</span>
-            <span className="block text-white/70">{hud.alive} alive</span>
+          <div className="rounded-full border border-white/70 bg-cream/90 px-4 py-2 text-center font-black text-ink shadow-xs">
+            <span className="block text-lg leading-none tabular-nums">{matchClock}</span>
+            <span className="mt-1 block text-[9px] uppercase tracking-[0.12em] text-coral-dark">Shrink {String(shrinkCountdown).padStart(2, '0')}</span>
           </div>
-          <div className="min-w-24 rounded-xl border border-white/20 bg-ink/75 px-3 py-2 text-right text-white shadow-sm">
-            <span className="block text-[10px] font-bold uppercase tracking-[0.14em] text-teal-soft">Rival</span>
-            <b className="block text-xl leading-none tabular-nums">{hud.rival.toLocaleString()}</b>
+          <div className="min-w-24 rounded-full border border-white/70 bg-cream/90 px-4 py-2 text-right text-ink shadow-xs">
+            <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-grass">Rival</span>
+            <b className="block text-2xl leading-none tabular-nums">{hud.rival.toLocaleString()}</b>
           </div>
         </div>
 
@@ -283,9 +296,9 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
         )}
 
         <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-3">
-          <div className="grid grid-cols-3 grid-rows-2 gap-1.5 rounded-2xl border border-white/15 bg-ink/55 p-2">
+          <div className="grid grid-cols-3 grid-rows-3 gap-0 rounded-full border border-white/70 bg-cream/90 p-1.5 shadow-xs">
             <button
-              className="control-button col-start-2 row-start-1 min-h-11 min-w-11 rounded-xl border border-white/20 bg-ink/80 text-lg text-white active:bg-ink disabled:opacity-45"
+              className="control-button col-start-2 row-start-1 min-h-11 min-w-11 rounded-t-full border border-line bg-card text-lg text-ink shadow-xs disabled:opacity-45"
               disabled={!controlsEnabled}
               aria-label="Turn up"
               onPointerDown={() => setTurn('up')}
@@ -293,7 +306,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
               ▲
             </button>
             <button
-              className="control-button col-start-1 row-start-2 min-h-11 min-w-11 rounded-xl border border-white/20 bg-ink/80 text-lg text-white active:bg-ink disabled:opacity-45"
+              className="control-button col-start-1 row-start-2 min-h-11 min-w-11 rounded-l-full border border-line bg-card text-lg text-ink shadow-xs disabled:opacity-45"
               disabled={!controlsEnabled}
               aria-label="Turn left"
               onPointerDown={() => setTurn('left')}
@@ -301,7 +314,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
               ◀
             </button>
             <button
-              className="control-button col-start-2 row-start-2 min-h-11 min-w-11 rounded-xl border border-white/20 bg-ink/80 text-lg text-white active:bg-ink disabled:opacity-45"
+              className="control-button col-start-2 row-start-3 min-h-11 min-w-11 rounded-b-full border border-line bg-card text-lg text-ink shadow-xs disabled:opacity-45"
               disabled={!controlsEnabled}
               aria-label="Turn down"
               onPointerDown={() => setTurn('down')}
@@ -309,7 +322,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
               ▼
             </button>
             <button
-              className="control-button col-start-3 row-start-2 min-h-11 min-w-11 rounded-xl border border-white/20 bg-ink/80 text-lg text-white active:bg-ink disabled:opacity-45"
+              className="control-button col-start-3 row-start-2 min-h-11 min-w-11 rounded-r-full border border-line bg-card text-lg text-ink shadow-xs disabled:opacity-45"
               disabled={!controlsEnabled}
               aria-label="Turn right"
               onPointerDown={() => setTurn('right')}
@@ -321,7 +334,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
             {hud.boosting ? 'Boosting · tail burns' : 'Hold boost to speed up'}
           </div>
           <button
-            className="control-button h-20 w-28 rounded-2xl border-2 border-[#f8d878] bg-lemon text-base font-extrabold text-ink shadow-sm active:scale-95 disabled:opacity-45"
+            className="control-button h-24 w-24 rounded-full border-[6px] border-white/80 bg-lemon text-sm font-black text-ink shadow-[0_5px_0_#d6be28] disabled:opacity-45"
             disabled={!controlsEnabled}
             onPointerDown={() => setBoost(true)}
             onPointerUp={() => setBoost(false)}
@@ -336,9 +349,9 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
       {result && (
         <div className="fixed inset-0 z-10 flex flex-col items-center justify-center gap-2.5 bg-cream/95 text-center">
           <p className="m-0 text-xs font-bold uppercase tracking-[0.18em] text-muted">Match result</p>
-          <h2 className="m-0 text-4xl font-black">{result.outcome === 'win' ? 'You win' : result.outcome === 'loss' ? 'Rival wins' : 'Draw'}</h2>
-          <p className="m-0 text-lg font-bold tabular-nums">{result.you.score.toLocaleString()} score</p>
-          <p className="m-0 mb-2 text-sm text-muted">{result.you.length} segments · <span className="font-semibold text-teal">Score verified</span></p>
+          <h2 className="result-hero m-0 text-4xl font-black">{result.outcome === 'win' ? 'You win' : result.outcome === 'loss' ? 'Rival wins' : 'Draw'}</h2>
+          <p className="result-score m-0 text-lg font-bold tabular-nums">{result.you.score.toLocaleString()} score</p>
+          <p className="result-detail m-0 mb-2 text-sm text-muted">{result.you.length} segments · <span className="font-semibold text-teal">Score verified</span></p>
           <button
             className="w-[210px] cursor-pointer rounded-[14px] border-none bg-coral p-4 text-xl font-extrabold text-white shadow-[0_6px_0_var(--color-coral-dark)] active:translate-y-[3px] active:shadow-[0_3px_0_var(--color-coral-dark)]"
             onClick={handleRematch}

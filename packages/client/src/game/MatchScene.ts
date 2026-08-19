@@ -10,6 +10,10 @@ export class MatchScene extends Phaser.Scene {
   private current: RenderSnapshot | null = null;
   private currentReceivedAt = 0;
   private decoratedSeed: number | null = null;
+  private previousPellets = new Set<string>();
+  private particles: Array<{ x: number; y: number; born: number; color: number }> = [];
+  private previousBounds: RenderSnapshot['bounds'] | null = null;
+  private boundaryFlashUntil = 0;
 
   private readonly cellPx = 720 / GRID_SIZE;
   private readonly offX = (1280 - 720) / 2;
@@ -73,6 +77,17 @@ export class MatchScene extends Phaser.Scene {
     const g = this.actors;
     g.clear();
     this.drawBoundary(g, state);
+    if (this.previousBounds && (this.previousBounds.x0 !== state.bounds.x0 || this.previousBounds.x1 !== state.bounds.x1 || this.previousBounds.y0 !== state.bounds.y0 || this.previousBounds.y1 !== state.bounds.y1)) this.boundaryFlashUntil = time + 260;
+    this.previousBounds = state.bounds;
+
+    const pelletKeys = new Set(state.pellets.map((p) => `${p.x}:${p.y}`));
+    for (const key of this.previousPellets) {
+      if (!pelletKeys.has(key)) {
+        const [px, py] = key.split(':').map(Number);
+        for (let i = 0; i < 6; i++) this.particles.push({ x: this.offX + (px + 0.5) * this.cellPx, y: (py + 0.5) * this.cellPx, born: time + i * 12, color: 0xf7e04d });
+      }
+    }
+    this.previousPellets = pelletKeys;
 
     for (const pellet of state.pellets) {
       const x = this.offX + (pellet.x + 0.5) * this.cellPx;
@@ -88,6 +103,22 @@ export class MatchScene extends Phaser.Scene {
       if (snake.boosting) this.drawBoostTrail(g, snake.cells, base);
       for (let index = snake.cells.length - 1; index >= 1; index--) this.drawSegment(g, snake.cells[index], base, outline, index);
       this.drawHead(g, snake.cells[0], snake.cells[1], base, outline, snake.id);
+    }
+    this.drawParticles(g, time);
+    if (time < this.boundaryFlashUntil) {
+      const alpha = (this.boundaryFlashUntil - time) / 260;
+      g.fillStyle(0xffffff, alpha * 0.18);
+      g.fillRect(this.offX, this.offY, 720, 720);
+    }
+  }
+
+  private drawParticles(g: Phaser.GameObjects.Graphics, time: number) {
+    this.particles = this.particles.filter((p) => time - p.born < 420);
+    for (const p of this.particles) {
+      const progress = Math.max(0, time - p.born) / 420;
+      const angle = (p.born % 6) * 1.05;
+      g.fillStyle(p.color, Math.max(0, 0.8 * (1 - progress)));
+      g.fillCircle(p.x + Math.cos(angle) * progress * 18, p.y + Math.sin(angle) * progress * 18, 2.5 * (1 - progress * 0.6));
     }
   }
 

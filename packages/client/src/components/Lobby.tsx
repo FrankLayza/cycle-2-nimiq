@@ -36,15 +36,15 @@ export function Lobby({ wallet, onConnectWallet, onPlay, onPvp, onToday }: Props
       </header>
 
       <section className="lobby-hero mt-8 rounded-3xl border border-line bg-card p-6 text-center shadow-sm sm:p-8">
-        <div className="mx-auto mb-5 flex h-28 max-w-[220px] items-end justify-center gap-2 rounded-2xl bg-grass-soft p-4" aria-hidden="true">
-          <span className="snake-mark snake-mark-coral" />
-          <span className="snake-mark snake-mark-teal" />
+        <div className="lobby-character mx-auto mb-5 h-28 max-w-[220px] rounded-2xl bg-grass-soft p-4" aria-hidden="true">
+          <div className="character-snake character-snake-coral"><i /><i /><i /><i /><b><span /><span /></b></div>
+          <div className="character-snake character-snake-teal"><i /><i /><i /><b><span /><span /></b></div>
           <span className="pickup-mark" />
         </div>
         <p className="m-0 text-xs font-bold uppercase tracking-[0.2em] text-coral">Quick 1v1 battles</p>
         <h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Grow. Boost. Outplay.</h2>
         <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-muted">Be the last snake standing in a fast, skill-first match.</p>
-        <button className="mt-6 min-h-14 w-full rounded-2xl border-none bg-coral px-6 text-xl font-black text-white shadow-[0_5px_0_var(--color-coral-dark)] transition-transform active:translate-y-1 active:shadow-none" onClick={onPlay}>
+        <button className="control-button mt-6 min-h-14 w-full rounded-2xl border-none bg-coral px-6 text-xl font-black text-white shadow-[0_5px_0_var(--color-coral-dark)]" onClick={onPlay}>
           PLAY NOW
         </button>
         <p className="mt-3 text-xs font-semibold text-muted">Free play · no wallet required</p>
