@@ -6,6 +6,7 @@ interface Props {
   onConnectWallet: () => void;
   onPlay: () => void;
   onPvp: (code: string) => void;
+  onToday: () => void;
 }
 
 export function Lobby({ wallet, onConnectWallet, onPlay, onPvp }: Props) {
@@ -39,7 +40,7 @@ export function Lobby({ wallet, onConnectWallet, onPlay, onPvp }: Props) {
         <button className="btn-secondary rounded-xl border-[1.5px] border-line bg-card px-4 py-2.5 text-sm" onClick={() => setOpen(true)}>
           Room code
         </button>
-        <button className="btn-secondary cursor-not-allowed rounded-xl border-[1.5px] border-line bg-card px-4 py-2.5 text-sm opacity-55" title="Today's Run — W2" disabled>
+        <button className="btn-secondary rounded-xl border-[1.5px] border-line bg-card px-4 py-2.5 text-sm" onClick={onToday}>
           Today&apos;s Run
         </button>
       </div>
