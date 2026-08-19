@@ -4,10 +4,14 @@ import { SIM_VERSION, TICK_MS, botPolicy, createRun, isTerminal, step, winnerOf 
 import type { AppliedInput, Dir, GameState } from '@snake/sim';
 import { MatchScene } from './MatchScene';
 import { swipeToDir } from './input';
+import { createMatchClient, joinPvp } from '../net/client';
 
 interface Props {
   onExit: () => void;
   onRematch: () => void;
+  mode?: 'bot' | 'pvp';
+  roomCode?: string;
+  wallet?: string;
 }
 
 interface HudState {
@@ -29,7 +33,7 @@ interface ResultState {
  * free-play and renders via Phaser (render-only). PvP via Colyseus replaces
  * the local bot path in W2 (room-code PvP milestone).
  */
-export function MatchView({ onExit, onRematch }: Props) {
+export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }: Props) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const pendingRef = useRef<AppliedInput>({ turn: null, boost: false });
   const [hud, setHud] = useState<HudState>({ you: 0, bot: 0, alive: 2, boundary: 30, seed: 0, boosting: false });
@@ -51,11 +55,31 @@ export function MatchView({ onExit, onRematch }: Props) {
     const scene = () => game.scene.getScene('Match') as MatchScene;
 
     let sim: GameState = createRun(seed, 'bot', SIM_VERSION);
+    let room: Awaited<ReturnType<typeof joinPvp>> | null = null;
+    let networked = false;
+    if (mode === 'pvp' && roomCode) {
+      const client = createMatchClient();
+      void joinPvp(client, roomCode, wallet).then((joined) => {
+        room = joined;
+        networked = true;
+        joined.onStateChange((state) => {
+          const you = state.snakes.get('0');
+          const rival = state.snakes.get('1');
+          setHud({ you: you?.score ?? 0, bot: rival?.score ?? 0, alive: [...state.snakes.values()].filter((s) => s.alive).length, boundary: state.boundary, seed: state.seed, boosting: you?.boosting ?? false });
+          if (state.status === 'finished' && state.resultJson) {
+            const result = JSON.parse(state.resultJson) as { winner: number | null; snakes: Array<{ id: number; score: number; length: number }> };
+            const own = result.snakes.find((s) => s.id === 0);
+            setResult({ winner: result.winner, you: { score: own?.score ?? 0, length: own?.length ?? 0 } });
+          }
+        });
+      }).catch(() => setResult({ winner: null, you: { score: 0, length: 0 } }));
+    }
     let running = true;
 
     const interval = setInterval(() => {
       if (!running) return;
       const a = pendingRef.current;
+      if (networked && room) { room.send('input', a); return; }
       const inputs: AppliedInput[] = [{ turn: a.turn, boost: a.boost }, botPolicy(sim, 1)];
       pendingRef.current = { turn: null, boost: a.boost }; // turn consumed; boost persists while held
       sim = step(sim, inputs);
@@ -100,6 +124,7 @@ export function MatchView({ onExit, onRematch }: Props) {
       clearInterval(interval);
       canvas?.removeEventListener('pointerdown', onDown);
       canvas?.removeEventListener('pointerup', onUp);
+      room?.leave();
       game.destroy(true);
     };
   }, []);

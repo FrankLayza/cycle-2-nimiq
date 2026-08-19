@@ -1,10 +1,18 @@
+import { useState } from 'react';
+import { normalizeRoomCode } from '../net/client';
+
 interface Props {
   wallet: { address: string } | null;
   onConnectWallet: () => void;
   onPlay: () => void;
+  onPvp: (code: string) => void;
 }
 
-export function Lobby({ wallet, onConnectWallet, onPlay }: Props) {
+export function Lobby({ wallet, onConnectWallet, onPlay, onPvp }: Props) {
+  const params = new URLSearchParams(window.location.search);
+  const initialCode = params.get('room') ?? '';
+  const [code, setCode] = useState(normalizeRoomCode(initialCode));
+  const [open, setOpen] = useState(Boolean(initialCode));
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3.5 p-5 text-center">
       <div className="text-[34px] font-extrabold tracking-wide">SNAKE RINK</div>
@@ -28,13 +36,14 @@ export function Lobby({ wallet, onConnectWallet, onPlay }: Props) {
         ▶ PLAY
       </button>
       <div className="flex gap-3">
-        <button className="btn-secondary cursor-not-allowed rounded-xl border-[1.5px] border-line bg-card px-4 py-2.5 text-sm opacity-55" title="Room-code PvP — W2" disabled>
+        <button className="btn-secondary rounded-xl border-[1.5px] border-line bg-card px-4 py-2.5 text-sm" onClick={() => setOpen(true)}>
           Room code
         </button>
         <button className="btn-secondary cursor-not-allowed rounded-xl border-[1.5px] border-line bg-card px-4 py-2.5 text-sm opacity-55" title="Today's Run — W2" disabled>
           Today&apos;s Run
         </button>
       </div>
+      {open && <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (code.length === 4) onPvp(code); }}><input autoFocus value={code} onChange={(e) => setCode(e.target.value.toUpperCase().replace(/[^0-9A-HJ-KM-NP-TV-Z]/g, '').slice(0,4))} maxLength={4} placeholder="ABCD" aria-label="Room code" className="w-24 rounded-xl border border-line bg-card px-3 py-2 text-center font-bold tracking-widest" /><button className="rounded-xl bg-teal px-3 py-2 font-bold" type="submit" disabled={code.length !== 4}>Join</button></form>}
       <div className="text-[13px] text-muted">🔥 0-day streak</div>
       <div className="rounded-[10px] bg-[#fff8dc] px-3.5 py-2 text-[13px]">
         🏆 Daily top-3 pays NIM · replay-verified

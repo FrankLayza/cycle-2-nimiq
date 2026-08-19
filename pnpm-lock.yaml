@@ -26,6 +26,12 @@ importers:
 
   packages/client:
     dependencies:
+      '@colyseus/schema':
+        specifier: ^3.0.76
+        version: 3.0.76
+      '@nimiq/mini-app-sdk':
+        specifier: ^0.1.0
+        version: 0.1.0
       '@snake/sim':
         specifier: workspace:*
         version: link:../sim
@@ -500,6 +506,9 @@ packages:
     resolution: {integrity: sha512-CmCXPQrkbwExx3j946/PtHWHbYJiCRBRDl4BlkRQcJB/YOwQxJRTpoo7aTsortjgoJ1x7opzTSxn7C+ASSLVjQ==}
     cpu: [x64]
     os: [win32]
+
+  '@nimiq/mini-app-sdk@0.1.0':
+    resolution: {integrity: sha512-QR5GGrL25U5xRkWdDhDMqY6npRXMtIu07Fe0cTXon5dLLlAuPhIaJU2egwASYITwFH1RXpYCE0JnufO88SleKA==}
 
   '@oxc-project/types@0.144.0':
     resolution: {integrity: sha512-nuhZIOLuI6TFQ32I/WnUx+SCPY7SdSKwgnFHydAuoS1+Z4BRcaP+RRJmGzl9lw+0OFF7UmaESf7KQRXaNLHypg==}
@@ -2529,6 +2538,8 @@ snapshots:
 
   '@msgpackr-extract/msgpackr-extract-win32-x64@3.0.4':
     optional: true
+
+  '@nimiq/mini-app-sdk@0.1.0': {}
 
   '@oxc-project/types@0.144.0': {}
 
