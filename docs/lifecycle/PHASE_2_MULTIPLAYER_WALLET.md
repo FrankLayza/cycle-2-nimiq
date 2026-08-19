@@ -18,7 +18,7 @@
 
 ### Task 2.2 — Client-Side Room-Code PvP Networking (`packages/client` & `packages/server`)
 - [~] `joinOrCreate('match', { mode: 'pvp', code, wallet })` and live input sending are wired; complete room lifecycle/error handling remains.
-- [~] Lobby can enter a 4-character code and reads `/?room=CODE`; room creation/display remains.
+- [x] Lobby can create a supported 1v1 room via REST, display/join its generated 4-character code, enter a code manually, and read `/?room=CODE`.
 - [~] Client schema mirror exists and inputs stream; consume authoritative state updates in Phaser.
 - [ ] Implement tick interpolation in Phaser to smoothly render remote snake movements.
 

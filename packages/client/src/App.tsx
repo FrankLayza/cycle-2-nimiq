@@ -11,6 +11,7 @@ export function App() {
   const [roomCode, setRoomCode] = useState('');
   const [matchKey, setMatchKey] = useState(0);
   const [wallet, setWallet] = useState<WalletIdentity | null>(getWallet());
+  const [roomError, setRoomError] = useState('');
 
   useEffect(() => {
     void initializeWallet();
@@ -18,6 +19,22 @@ export function App() {
 
   const handleConnect = async () => {
     setWallet(await connectWallet());
+  };
+
+  const handleCreateRoom = async () => {
+    setRoomError('');
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_URL ?? '/api/v1'}/rooms`, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ mode: 'pvp', maxPlayers: 2 }),
+      });
+      if (!response.ok) throw new Error('Could not create room');
+      const room = await response.json() as { code: string };
+      setRoomCode(room.code);
+      setScreen('pvp');
+    } catch (error) {
+      setRoomError(error instanceof Error ? error.message : 'Could not create room');
+    }
   };
 
   return (
@@ -32,6 +49,8 @@ export function App() {
           }}
           onPvp={(code) => { setRoomCode(code); setScreen('pvp'); }}
           onToday={() => setScreen('today')}
+          onCreateRoom={() => void handleCreateRoom()}
+          roomError={roomError}
         />
       ) : screen === 'match' ? (
         <Suspense fallback={<ScreenLoader label="Preparing the field…" />}><MatchView

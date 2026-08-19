@@ -44,6 +44,10 @@ Dependency direction (enforced): `server → sim` · `client → sim`. Client an
   identity and lobby display are implemented. Room-code join, schema mirror, deep-link input, and live
   input sending are partially wired. Authoritative rendering/interpolation, room creation/lifecycle,
   Today's Run signing, real-device validation, and Lawn League art remain.
+- **PvP flow:** lobby can create a room through `POST /api/v1/rooms` and join by the generated 4-character
+  code. Current capacity is explicitly 2 because the deterministic sim is still 1v1. Phaser keeps dead
+  snakes rendered at reduced opacity in the final state, preventing the empty-board result screen. A
+  3–4 player room selector must wait for a deliberate sim expansion and `SIM_VERSION` bump.
 
 ## Conventions & gotchas
 

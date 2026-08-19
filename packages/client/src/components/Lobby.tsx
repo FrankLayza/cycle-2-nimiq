@@ -7,9 +7,11 @@ interface Props {
   onPlay: () => void;
   onPvp: (code: string) => void;
   onToday: () => void;
+  onCreateRoom: () => void;
+  roomError?: string;
 }
 
-export function Lobby({ wallet, onConnectWallet, onPlay, onPvp, onToday }: Props) {
+export function Lobby({ wallet, onConnectWallet, onPlay, onPvp, onToday, onCreateRoom, roomError }: Props) {
   const params = new URLSearchParams(window.location.search);
   const [code, setCode] = useState(normalizeRoomCode(params.get('room') ?? ''));
   const [open, setOpen] = useState(Boolean(params.get('room')));
