@@ -7,6 +7,7 @@ import type { AppliedInput } from '@snake/sim';
 import { buildApp } from '../src/app.js';
 import { closeDb } from '../src/db/client.js';
 import { dailySeed } from '../src/services/seed.js';
+import { attestationMessage } from '../src/api/runs.js';
 
 const DAY = '2026-08-17';
 const WALLET = 'NQ00TEST0000000000000000000000000000000';
@@ -28,7 +29,9 @@ function validPayload(inputs: AppliedInput[][] = NOOP) {
   const seed = dailySeed(DAY, 'test-salt');
   const r = replay(seed, SIM_VERSION, inputs, 'solo');
   const score = r.snakes[0].score + r.snakes[0].length + r.ticks;
-  return { day: DAY, seed, simVersion: SIM_VERSION, wallet: WALLET, inputs, reportedScore: score, attestation: 'fake-sig' };
+  const id = 'test-run-1';
+  return { id, day: DAY, seed, simVersion: SIM_VERSION, wallet: WALLET, inputs, reportedScore: score,
+    attestation: { message: attestationMessage(DAY, seed, score, id), publicKey: 'fake-key', signature: 'fake-sig' } };
 }
 
 /** A different-but-honest run: distinct input log ⇒ distinct log_hash (D29). */

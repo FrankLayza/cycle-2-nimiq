@@ -11,6 +11,10 @@ export function logHashOf(inputs: AppliedInput[][]): string {
   return createHash('sha256').update(JSON.stringify(inputs)).digest('hex');
 }
 
+export function attestationMessage(day: string, seed: number, score: number, runId: string): string {
+  return `snake-rink:today:${runId}:${day}:${seed}:${score}`;
+}
+
 export function registerRuns(app: FastifyInstance): void {
   app.get('/api/v1/run/today', async () => {
     const cfg = loadConfig();
@@ -36,7 +40,8 @@ export function registerRuns(app: FastifyInstance): void {
     const wallet = String(body.wallet ?? '');
     const inputs = body.inputs as AppliedInput[][] | undefined;
     const reportedScore = Number(body.reportedScore);
-    const attestation = body.attestation;
+    const attestation = body.attestation as { message?: string; publicKey?: string; signature?: string } | undefined;
+    const runId = String(body.id ?? '');
 
     if (!inputs || !wallet || !Number.isFinite(seed) || !Number.isFinite(reportedScore)) {
       return reply.code(400).send({ error: 'missing fields: inputs, wallet, seed, reportedScore' });
@@ -47,14 +52,15 @@ export function registerRuns(app: FastifyInstance): void {
     if (version !== SIM_VERSION) {
       return reply.code(400).send({ error: `SIM_VERSION mismatch: ${version}` });
     }
-    if (!attestation) {
-      // TODO(W1 spike): require + verify the Nimiq signature (D34) once the
-      // tx-signing / wallet lib lands. Today's Run is the only signed flow.
-      return reply.code(400).send({ error: 'attestation required (D34)' });
+    if (!attestation?.message || !attestation.publicKey || !attestation.signature) {
+      return reply.code(400).send({ error: 'attestation must include message, publicKey, and signature' });
+    }
+    if (!runId || attestation.message !== attestationMessage(day, seed, reportedScore, runId)) {
+      return reply.code(400).send({ error: 'attestation message does not match run payload' });
     }
 
     const record: RunRecord = {
-      id: randomUUID(),
+      id: runId || randomUUID(),
       day,
       wallet,
       seed,
@@ -64,7 +70,7 @@ export function registerRuns(app: FastifyInstance): void {
       reportedScore,
       logHash: logHashOf(inputs),
       attestedAt: Date.now(),
-      attestation,
+      attestation: JSON.stringify(attestation),
     };
 
     const res = verifyRun(record);
