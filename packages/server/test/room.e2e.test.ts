@@ -160,6 +160,8 @@ describe('MatchRoom e2e (2 Colyseus clients)', () => {
     expect([...room1.state.snakes.values()].map((snake) => snake.sessionId)).toEqual(
       expect.arrayContaining([room1.sessionId, room2.sessionId]),
     );
+    expect([...room1.state.snakes.values()].every((snake) => snake.cells.length > 0)).toBe(true);
+    expect(room1.state.pellets.length).toBeGreaterThan(0);
 
     // Play ~2.5s of inputs (some turns, some boosts).
     for (let i = 0; i < 20; i++) {

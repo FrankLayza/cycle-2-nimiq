@@ -1,4 +1,3 @@
-import { ArraySchema } from '@colyseus/schema';
 import { Room } from 'colyseus';
 import type { Client } from 'colyseus';
 import { SIM_VERSION, TICK_MS, botPolicy, createRun, isTerminal, step, winnerOf } from '@snake/sim';
@@ -182,11 +181,15 @@ export class MatchRoom extends Room<MatchState> {
       s.length = sn.cells.length;
       s.alive = sn.alive;
       s.boosting = sn.boost;
-      s.cells = new ArraySchema(...sn.cells.map((c) => Object.assign(new CellState(), { x: c.x, y: c.y })));
+      s.cells.clear();
+      for (const c of sn.cells) {
+        s.cells.push(Object.assign(new CellState(), { x: c.x, y: c.y }));
+      }
     }
-    this.state.pellets = new ArraySchema(
-      ...this.sim.pellets.map((p) => Object.assign(new PelletState(), { x: p.x, y: p.y, type: p.type })),
-    );
+    this.state.pellets.clear();
+    for (const p of this.sim.pellets) {
+      this.state.pellets.push(Object.assign(new PelletState(), { x: p.x, y: p.y, type: p.type }));
+    }
   }
 
   private finish() {
