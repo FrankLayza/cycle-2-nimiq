@@ -9,7 +9,7 @@ interface Props {
   onToday: () => void;
 }
 
-export function Lobby({ wallet, onConnectWallet, onPlay, onPvp }: Props) {
+export function Lobby({ wallet, onConnectWallet, onPlay, onPvp, onToday }: Props) {
   const params = new URLSearchParams(window.location.search);
   const initialCode = params.get('room') ?? '';
   const [code, setCode] = useState(normalizeRoomCode(initialCode));

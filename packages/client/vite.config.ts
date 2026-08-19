@@ -9,7 +9,9 @@ export default defineConfig({
     proxy: {
       // Dev: REST + WebSocket share the server's single port (D26).
       '/api': { target: 'http://localhost:8080', changeOrigin: true },
-      '/colyseus': { target: 'ws://localhost:8080', ws: true },
+      // Colyseus performs HTTP matchmaking first, then upgrades the returned
+      // endpoint to WebSocket. The proxy must support both protocols.
+      '/colyseus': { target: 'http://localhost:8080', changeOrigin: true, ws: true },
     },
   },
   // @snake/sim ships as source (zero-deps TS) — exclude from pre-bundling.

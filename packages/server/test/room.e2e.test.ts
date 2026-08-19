@@ -144,14 +144,19 @@ describe('MatchRoom e2e (2 Colyseus clients)', () => {
   it('runs a full authoritative PvP match both clients can observe', async () => {
     const c1 = new Client(`ws://localhost:${port}`);
     const c2 = new Client(`ws://localhost:${port}`);
-    const [room1, room2] = await Promise.all([
-      c1.joinOrCreate('match', { mode: 'pvp', code: 'ABCD', wallet: 'w1' }, ClientMatchState),
-      c2.joinOrCreate('match', { mode: 'pvp', code: 'ABCD', wallet: 'w2' }, ClientMatchState),
-    ]);
+    const room1 = await c1.joinOrCreate('match', { mode: 'pvp', code: 'ABCD', wallet: 'w1' }, ClientMatchState);
+    await waitFor(() => room1.state.snakes.size === 1, 2000);
+    expect(room1.state.status).toBe('lobby');
+    expect(room1.state.snakes.size).toBe(1);
+
+    const room2 = await c2.joinOrCreate('match', { mode: 'pvp', code: 'ABCD', wallet: 'w2' }, ClientMatchState);
 
     // Both clients seated → countdown → playing (state patches land async).
     await waitFor(() => room1.state.mode === 'pvp' && room1.state.status === 'playing', 15000);
     expect(room1.state.seed).toBe(room2.state.seed);
+    await waitFor(() => (room1.state.snakes.get('0')?.cells.length ?? 0) > 0, 2000);
+    expect(room1.state.snakes.get('0')?.cells.length).toBeGreaterThan(0);
+    expect(room1.state.snakes.get('1')?.cells.length).toBeGreaterThan(0);
     expect([...room1.state.snakes.values()].map((snake) => snake.sessionId)).toEqual(
       expect.arrayContaining([room1.sessionId, room2.sessionId]),
     );

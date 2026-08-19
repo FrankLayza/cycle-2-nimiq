@@ -27,7 +27,8 @@ export class MatchScene extends Phaser.Scene {
     this.g = this.add.graphics();
   }
 
-  submitSnapshot(snapshot: RenderSnapshot, receivedAt = performance.now()) {
+  submitSnapshot(snapshot: RenderSnapshot, receivedAt?: number) {
+    const timestamp = receivedAt ?? this.game?.loop?.now ?? performance.now();
     if (this.current && snapshot.tick < this.current.tick) return;
     if (this.current && snapshot.tick === this.current.tick) {
       this.current = snapshot;
@@ -35,7 +36,7 @@ export class MatchScene extends Phaser.Scene {
     }
     this.previous = this.current;
     this.current = snapshot;
-    this.currentReceivedAt = receivedAt;
+    this.currentReceivedAt = timestamp;
   }
 
   update(time: number) {
