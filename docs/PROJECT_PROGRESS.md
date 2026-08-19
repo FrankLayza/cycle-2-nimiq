@@ -1,6 +1,6 @@
 # PROJECT_PROGRESS — Competitive Snake (Nimiq Mini App)
 
-**Updated:** 2026-08-15 · **Phase:** W1 scaffold (Build) · **Next milestone:** W2 — wallet init + PvP client wiring + real-device pass
+**Updated:** 2026-08-19 · **Phase:** W2 wallet integration (Build) · **Next milestone:** W2 — PvP client wiring + real-device pass
 
 Source of truth: `COMPETITIVE_SNAKE_GAME.md` · Architecture: `architecture/ARCHITECTURE.md` · Lifecycle: [`docs/lifecycle/INDEX.md`](./lifecycle/INDEX.md) · Handoff: `docs/AI_HANDOFF.md`
 
@@ -33,7 +33,7 @@ D35 (scaffold runtime: tsx source-mode, no build orchestration) · D36 (Colyseus
 1. **Public GitHub repo + MIT license + competition registration + Skool join** (W1 checklist, human action).
 2. **Railway + Pages deploy wiring** (`RAILWAY_DEPLOY_HOOK` secret, real deploy) — `.env.example` + workflows ready.
 3. **Nimiq tx-signing spike** (payout prerequisite) — `REWARD_SIGNER_KEY` wiring, testnet faucet (flagged in architecture §7).
-4. **W2:** Nimiq provider `init()` wallet identity, room-code PvP **client** wiring (server side already e2e-verified), Today's Run client flow + attestation signing, real-device pass in Nimiq Pay, Lawn League art.
+4. **W2:** Nimiq provider `init()` + `listAccounts()` adapter is implemented; remaining work is room-code PvP **client** wiring (server side already e2e-verified), Today's Run client flow + attestation signing, real-device pass in Nimiq Pay, Lawn League art.
 5. **Eslint** runs but is not yet wired into per-package type-aware checks (flat config, non-type-aware).
 
 ---

@@ -1,6 +1,6 @@
 # AI_HANDOFF — Competitive Snake (Nimiq Mini App)
 
-**Handoff written:** 2026-08-15 · **Next session should start here.**
+**Handoff written:** 2026-08-19 · **Next session should start here.**
 
 Read, in order: `docs/AI_HANDOFF.md` → `docs/lifecycle/INDEX.md` → `docs/PROJECT_PROGRESS.md` → `COMPETITIVE_SNAKE_GAME.md` → `architecture/ARCHITECTURE.md` (as needed).
 
@@ -20,7 +20,7 @@ Read, in order: `docs/AI_HANDOFF.md` → `docs/lifecycle/INDEX.md` → `docs/PRO
 
 ## Immediate next actions (W2)
 
-1. Nimiq wallet: replace `packages/client/src/wallet/stub.ts` with the provider `init()` read-only identity (D7 — still silent, never blocking first match).
+1. Nimiq wallet: provider adapter now uses the official `@nimiq/mini-app-sdk` `init()` + `listAccounts()` flow; validate in Nimiq Pay and add signing later for Today's Run.
 2. Client PvP: wire `packages/client/src/net/client.ts` + Lobby "Room code" button to `joinOrCreate('match', { mode: 'pvp', code })` with a client schema mirror (the e2e in `packages/server/test/room.e2e.test.ts` is the reference); live input forwarding + interpolation (match-scene-spec §4).
 3. Today's Run client flow + signed attestation (needs tx-signing spike first).
 4. Real-device pass in Nimiq Pay: rotation/resize events, safe areas, touch (spike §12 flagged).

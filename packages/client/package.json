@@ -11,6 +11,7 @@
     "typecheck": "tsc -p tsconfig.json"
   },
   "dependencies": {
+    "@nimiq/mini-app-sdk": "^0.1.0",
     "@snake/sim": "workspace:*",
     "@tailwindcss/vite": "^4.3.3",
     "colyseus.js": "^0.16.22",
