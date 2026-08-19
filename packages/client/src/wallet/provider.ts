@@ -99,4 +99,3 @@ export function getWalletStatus(): WalletStatus {
 export function getWalletError(): Error | null {
   return lastError;
 }
-import { init } from '@nimiq/mini-app-sdk';
