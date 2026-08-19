@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
-import { GRID_SIZE } from '@snake/sim';
-import type { GameState } from '@snake/sim';
+import { GRID_SIZE, TICK_MS } from '@snake/sim';
+import { interpolateSnapshots } from './renderState';
+import type { RenderSnapshot } from './renderState';
 
 /**
  * Render-only Phaser scene (match-scene-spec §1, M4): draws sim state every
@@ -9,6 +10,9 @@ import type { GameState } from '@snake/sim';
  */
 export class MatchScene extends Phaser.Scene {
   private g!: Phaser.GameObjects.Graphics;
+  private previous: RenderSnapshot | null = null;
+  private current: RenderSnapshot | null = null;
+  private currentReceivedAt = 0;
 
   // 1280x720 canvas; the 30x30 arena is a centered 720x720 square.
   private readonly cellPx = 720 / GRID_SIZE;
@@ -23,7 +27,24 @@ export class MatchScene extends Phaser.Scene {
     this.g = this.add.graphics();
   }
 
-  renderState(state: GameState) {
+  submitSnapshot(snapshot: RenderSnapshot, receivedAt = performance.now()) {
+    if (this.current && snapshot.tick < this.current.tick) return;
+    if (this.current && snapshot.tick === this.current.tick) {
+      this.current = snapshot;
+      return;
+    }
+    this.previous = this.current;
+    this.current = snapshot;
+    this.currentReceivedAt = receivedAt;
+  }
+
+  update(time: number) {
+    if (!this.current) return;
+    const alpha = (time - this.currentReceivedAt) / TICK_MS;
+    this.renderSnapshot(interpolateSnapshots(this.previous, this.current, alpha));
+  }
+
+  private renderSnapshot(state: RenderSnapshot) {
     const g = this.g;
     g.clear();
 
@@ -51,10 +72,10 @@ export class MatchScene extends Phaser.Scene {
     }
 
     // Snakes — coral (you) / teal (bot) rounded segments + head highlight.
-    const colors = [0xff6b6b, 0x3ddc84];
     for (const sn of state.snakes) {
       if (!sn.alive) continue;
-      g.fillStyle(colors[sn.id] ?? 0x3ddc84, 1);
+      const color = Phaser.Display.Color.HexStringToColor(sn.color || (sn.id === 0 ? '#ff6b6b' : '#3ddc84'));
+      g.fillStyle(color.color, 1);
       for (const c of sn.cells) {
         g.fillRoundedRect(
           this.offX + c.x * this.cellPx + 1,
@@ -65,6 +86,7 @@ export class MatchScene extends Phaser.Scene {
         );
       }
       const h = sn.cells[0];
+      if (!h) continue;
       g.fillStyle(0xffffff, 0.9);
       g.fillCircle(
         this.offX + (h.x + 0.35) * this.cellPx,

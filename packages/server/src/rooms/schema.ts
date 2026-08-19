@@ -22,6 +22,7 @@ export class PelletState extends Schema {
 
 export class SnakeState extends Schema {
   declare seat: number;
+  declare sessionId: string;
   declare wallet: string;
   declare isBot: boolean;
   declare cells: ArraySchema<CellState>;
@@ -34,6 +35,7 @@ export class SnakeState extends Schema {
   constructor() {
     super();
     this.seat = 0;
+    this.sessionId = '';
     this.wallet = '';
     this.isBot = false;
     this.cells = new ArraySchema<CellState>();
@@ -83,6 +85,7 @@ defineTypes(CellState, { x: 'number', y: 'number' });
 defineTypes(PelletState, { x: 'number', y: 'number', type: 'number' });
 defineTypes(SnakeState, {
   seat: 'number',
+  sessionId: 'string',
   wallet: 'string',
   isBot: 'boolean',
   cells: [CellState],

@@ -31,6 +31,7 @@ class ClientPellet extends Schema {
 }
 class ClientSnake extends Schema {
   declare seat: number;
+  declare sessionId: string;
   declare wallet: string;
   declare isBot: boolean;
   declare cells: ArraySchema<ClientCell>;
@@ -42,6 +43,7 @@ class ClientSnake extends Schema {
   constructor() {
     super();
     this.seat = 0;
+    this.sessionId = '';
     this.wallet = '';
     this.isBot = false;
     this.cells = new ArraySchema<ClientCell>();
@@ -86,6 +88,7 @@ defineTypes(ClientCell, { x: 'number', y: 'number' });
 defineTypes(ClientPellet, { x: 'number', y: 'number', type: 'number' });
 defineTypes(ClientSnake, {
   seat: 'number',
+  sessionId: 'string',
   wallet: 'string',
   isBot: 'boolean',
   cells: [ClientCell],
@@ -149,6 +152,9 @@ describe('MatchRoom e2e (2 Colyseus clients)', () => {
     // Both clients seated → countdown → playing (state patches land async).
     await waitFor(() => room1.state.mode === 'pvp' && room1.state.status === 'playing', 15000);
     expect(room1.state.seed).toBe(room2.state.seed);
+    expect([...room1.state.snakes.values()].map((snake) => snake.sessionId)).toEqual(
+      expect.arrayContaining([room1.sessionId, room2.sessionId]),
+    );
 
     // Play ~2.5s of inputs (some turns, some boosts).
     for (let i = 0; i < 20; i++) {

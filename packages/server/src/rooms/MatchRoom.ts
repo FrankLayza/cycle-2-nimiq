@@ -74,11 +74,11 @@ export class MatchRoom extends Room<MatchState> {
     const seat = this.freeSeat();
     if (seat === null) return; // spectator — state still syncs
     this.seatOf.set(client.sessionId, seat);
-    this.addSnake(seat, options.wallet ?? 'anon', false);
+    this.addSnake(seat, options.wallet ?? 'anon', false, client.sessionId);
     // Bots only in free-play (D5): fill seat 1 as soon as the first human arrives.
     if (this.mode === 'bot' && this.botSeat === null) {
       this.botSeat = 1;
-      this.addSnake(1, 'BOT', true);
+      this.addSnake(1, 'BOT', true, 'bot');
     }
     this.maybeStart();
   }
@@ -110,9 +110,10 @@ export class MatchRoom extends Room<MatchState> {
     return null;
   }
 
-  private addSnake(seat: number, wallet: string, isBot: boolean) {
+  private addSnake(seat: number, wallet: string, isBot: boolean, sessionId: string) {
     const snake = new SnakeState();
     snake.seat = seat;
+    snake.sessionId = sessionId;
     snake.wallet = wallet;
     snake.isBot = isBot;
     snake.color = seat === 0 ? '#ff6b6b' : '#3ddc84';
@@ -222,4 +223,3 @@ export class MatchRoom extends Room<MatchState> {
     this.startCountdown();
   }
 }
-
