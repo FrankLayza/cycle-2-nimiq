@@ -14,11 +14,15 @@
     "build": "pnpm --filter @snake/server build && pnpm --filter @snake/client build",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",
+    "test:e2e": "playwright test",
     "lint": "eslint ."
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@types/pngjs": "^6.0.5",
     "concurrently": "^10.0.5",
     "eslint": "^10.8.1",
+    "pngjs": "^7.0.0",
     "prettier": "^3.9.6",
     "typescript": "^5.9.0",
     "typescript-eslint": "^8.67.0"

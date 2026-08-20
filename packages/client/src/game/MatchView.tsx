@@ -144,6 +144,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
             roomRef.current = joined;
 
             const applyState = (state: ClientMatchState) => {
+              console.warn('[DEBUG-pvp-state]', state.status, state.tick, Array.from(state.snakes.values()).map((snake) => snake.cells.length));
               scene().submitSnapshot(snapshotFromRoom(state));
               const snakes = Array.from(state.snakes.values());
               const own = snakes.find((snake) => snake.sessionId === joined.sessionId);

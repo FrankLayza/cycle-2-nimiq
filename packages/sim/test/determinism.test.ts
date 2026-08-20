@@ -30,6 +30,17 @@ describe('determinism (D31)', () => {
     expect(a).not.toBe(b);
   });
 
+  it('PvP opening lanes remain visible before an idle collision', () => {
+    let state = createRun(12345, 'pvp');
+    for (let tick = 0; tick < 20; tick++) {
+      expect(state.snakes.every((snake) => snake.alive)).toBe(true);
+      state = step(state, [
+        { turn: null, boost: false },
+        { turn: null, boost: false },
+      ]);
+    }
+  });
+
   it('recorded inputs drive the outcome (replay differs without the log)', () => {
     const withLog = JSON.stringify(replay(999, SIM_VERSION, scripted(), 'bot'));
     const without = JSON.stringify(replay(999, SIM_VERSION, NOOP, 'bot'));

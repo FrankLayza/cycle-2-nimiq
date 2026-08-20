@@ -4,13 +4,13 @@ import type { Arena, Cell } from './types.js';
 
 /**
  * Fixed spawns guarantee early separation (D12) — opposite sides of the grid,
- * facing inward: seat 0 from the west, seat 1 from the east. The spike's
- * default spawn forced an instant head-on; this layout gives ~8 ticks of
- * approach before any contact, plenty to turn toward pellets.
+ * facing inward: seat 0 from the west, seat 1 from the east. The seats use
+ * different lanes so an idle player still gets a visible opening before a
+ * deliberate turn creates a collision.
  */
 export const SPAWNS: { id: number; cells: Cell[]; dir: { x: number; y: number } }[] = [
-  { id: 0, cells: [{ x: 6, y: 15 }, { x: 5, y: 15 }, { x: 4, y: 15 }], dir: { x: 1, y: 0 } },
-  { id: 1, cells: [{ x: 23, y: 15 }, { x: 24, y: 15 }, { x: 25, y: 15 }], dir: { x: -1, y: 0 } },
+  { id: 0, cells: [{ x: 6, y: 10 }, { x: 5, y: 10 }, { x: 4, y: 10 }], dir: { x: 1, y: 0 } },
+  { id: 1, cells: [{ x: 23, y: 20 }, { x: 24, y: 20 }, { x: 25, y: 20 }], dir: { x: -1, y: 0 } },
 ];
 
 function key(c: Cell): string {
