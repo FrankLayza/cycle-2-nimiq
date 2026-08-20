@@ -32,5 +32,6 @@ coverage/
 .DS_Store
 Thumbs.db
 .idea/
+.freebuff
 .vscode/*
 !.vscode/extensions.json
