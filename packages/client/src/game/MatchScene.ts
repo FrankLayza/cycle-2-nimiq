@@ -15,13 +15,20 @@ export class MatchScene extends Phaser.Scene {
   private previousBounds: RenderSnapshot['bounds'] | null = null;
   private boundaryFlashUntil = 0;
 
-  private readonly cellPx = 720 / GRID_SIZE;
-  private readonly offX = (1280 - 720) / 2;
-  private readonly offY = 0;
+  private cellPx = 720 / GRID_SIZE;
+  private offX = 280;
+  private offY = 0;
+  private fieldSize = 720;
 
   constructor() { super('Match'); }
 
   create() {
+    const width = this.scale.width;
+    const height = this.scale.height;
+    this.fieldSize = Math.min(width, height);
+    this.cellPx = this.fieldSize / GRID_SIZE;
+    this.offX = (width - this.fieldSize) / 2;
+    this.offY = (height - this.fieldSize) / 2;
     this.cameras.main.setBackgroundColor('#dff0d5');
     this.field = this.add.graphics();
     this.actors = this.add.graphics();
@@ -48,17 +55,18 @@ export class MatchScene extends Phaser.Scene {
     const g = this.field;
     g.clear();
     g.fillStyle(0x75bd59, 1);
-    g.fillRoundedRect(this.offX, this.offY, 720, 720, 18);
+    g.fillRoundedRect(this.offX, this.offY, this.fieldSize, this.fieldSize, 18);
     for (let x = 0; x < GRID_SIZE; x++) {
       g.fillStyle(x % 2 === 0 ? 0xffffff : 0x315f24, x % 2 === 0 ? 0.035 : 0.025);
-      g.fillRect(this.offX + x * this.cellPx, 0, this.cellPx, 720);
+      g.fillRect(this.offX + x * this.cellPx, this.offY, this.cellPx, this.fieldSize);
     }
 
     let value = seed || 1;
     const random = () => { value = (value * 1664525 + 1013904223) >>> 0; return value / 0x100000000; };
     for (let i = 0; i < 34; i++) {
-      const x = this.offX + 12 + random() * 696;
-      const y = 12 + random() * 696;
+      const inset = this.fieldSize / 60;
+      const x = this.offX + inset + random() * (this.fieldSize - inset * 2);
+      const y = this.offY + inset + random() * (this.fieldSize - inset * 2);
       const radius = 1.5 + random() * 1.4;
       g.fillStyle(0xffffff, 0.68);
       for (let petal = 0; petal < 4; petal++) {
@@ -70,7 +78,7 @@ export class MatchScene extends Phaser.Scene {
     }
 
     g.lineStyle(3, 0x274c22, 0.18);
-    g.strokeRoundedRect(this.offX, 0, 720, 720, 18);
+    g.strokeRoundedRect(this.offX, this.offY, this.fieldSize, this.fieldSize, 18);
   }
 
   private renderSnapshot(state: RenderSnapshot, time: number) {
@@ -108,7 +116,7 @@ export class MatchScene extends Phaser.Scene {
     if (time < this.boundaryFlashUntil) {
       const alpha = (this.boundaryFlashUntil - time) / 260;
       g.fillStyle(0xffffff, alpha * 0.18);
-      g.fillRect(this.offX, this.offY, 720, 720);
+      g.fillRect(this.offX, this.offY, this.fieldSize, this.fieldSize);
     }
   }
 

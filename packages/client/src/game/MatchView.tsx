@@ -72,11 +72,12 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
     if (!host) return;
 
     const seed = (Math.random() * 0xffffffff) >>> 0;
+    const portrait = window.innerHeight > window.innerWidth;
     const game = new Phaser.Game({
       type: Phaser.AUTO,
       parent: host,
-      width: 1280,
-      height: 720,
+      width: portrait ? 720 : 1280,
+      height: portrait ? 1280 : 720,
       backgroundColor: '#8fd46a',
       scene: [MatchScene],
     });
@@ -260,27 +261,28 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
     <div className="fixed inset-0 flex items-center justify-center bg-cream">
       <div
         id="world"
-        className="relative aspect-video w-[min(100vw,calc(100vh*16/9))] overflow-hidden rounded-[10px] bg-[#0b0e14] portrait:w-[min(100vh,calc(100vw*16/9))] portrait:rotate-90"
+        className="match-shell relative h-full w-full overflow-hidden bg-[#0b0e14] landscape:aspect-video landscape:h-auto landscape:w-[min(100vw,calc(100vh*16/9))] landscape:rounded-[10px]"
       >
         <div ref={hostRef} className="h-full w-full" />
-        <div className="pointer-events-none absolute left-3 right-3 top-3 flex items-start justify-between gap-2">
-          <div className="min-w-24 rounded-full border border-white/70 bg-cream/90 px-4 py-2 text-left text-ink shadow-xs">
+        <div className="match-hud pointer-events-none absolute left-4 right-4 top-4 flex items-start justify-between gap-3">
+          <div className="match-stat min-w-24 rounded-2xl border border-white/75 bg-white/88 px-3.5 py-2.5 text-left text-ink shadow-xs backdrop-blur-xs">
             <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-coral-dark">You</span>
-            <b className="block text-2xl leading-none tabular-nums">{hud.you.toLocaleString()}</b>
+            <b key={hud.you} className="score-pop mt-0.5 block text-2xl leading-none tabular-nums">{hud.you.toLocaleString()}</b>
           </div>
-          <div className="rounded-full border border-white/70 bg-cream/90 px-4 py-2 text-center font-black text-ink shadow-xs">
+          <div className="match-clock rounded-2xl border border-white/75 bg-ink/90 px-4 py-2.5 text-center font-black text-white shadow-xs backdrop-blur-xs">
             <span className="block text-lg leading-none tabular-nums">{matchClock}</span>
-            <span className="mt-1 block text-[9px] uppercase tracking-[0.12em] text-coral-dark">Shrink {String(shrinkCountdown).padStart(2, '0')}</span>
+            <span className="mt-1 block text-[9px] uppercase tracking-[0.12em] text-coral-soft">Shrink {String(shrinkCountdown).padStart(2, '0')}</span>
           </div>
-          <div className="min-w-24 rounded-full border border-white/70 bg-cream/90 px-4 py-2 text-right text-ink shadow-xs">
+          <div className="match-stat min-w-24 rounded-2xl border border-white/75 bg-white/88 px-3.5 py-2.5 text-right text-ink shadow-xs backdrop-blur-xs">
             <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-grass">Rival</span>
-            <b className="block text-2xl leading-none tabular-nums">{hud.rival.toLocaleString()}</b>
+            <b key={hud.rival} className="score-pop mt-0.5 block text-2xl leading-none tabular-nums">{hud.rival.toLocaleString()}</b>
           </div>
         </div>
 
         {phaseMessage && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-ink/35">
-            <div className="rounded-2xl bg-white px-6 py-4 text-center text-lg font-bold text-ink shadow-sm">
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-ink/25 backdrop-blur-xs">
+            <div className="status-panel w-[min(88%,20rem)] rounded-2xl bg-cream px-6 py-5 text-center text-ink shadow-sm">
+              <div className="loading-snake mx-auto mb-4 h-6 w-16 rounded-full bg-teal" />
               {phaseMessage}
             </div>
           </div>
@@ -289,16 +291,16 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
         {phase === 'error' && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-ink/70 px-6 text-center text-white">
             <p className="max-w-[42ch] text-base">{error}</p>
-            <button className="rounded-xl bg-white px-4 py-2 font-bold text-ink" onClick={onExit}>
+            <button className="button-primary min-h-12 rounded-xl bg-white px-5 py-2 font-bold text-ink" onClick={onExit}>
               Return to lobby
             </button>
           </div>
         )}
 
-        <div className="absolute bottom-3 left-3 right-3 flex items-end justify-between gap-3">
-          <div className="grid grid-cols-3 grid-rows-3 gap-0 rounded-full border border-white/70 bg-cream/90 p-1.5 shadow-xs">
+        <div className="match-controls absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3">
+          <div className="grid grid-cols-3 grid-rows-3 gap-1 rounded-2xl border border-white/75 bg-white/88 p-2 shadow-xs backdrop-blur-xs">
             <button
-              className="control-button col-start-2 row-start-1 min-h-11 min-w-11 rounded-t-full border border-line bg-card text-lg text-ink shadow-xs disabled:opacity-45"
+              className="control-button col-start-2 row-start-1 min-h-11 min-w-11 rounded-xl border border-line bg-card text-lg text-ink shadow-xs disabled:opacity-45"
               disabled={!controlsEnabled}
               aria-label="Turn up"
               onPointerDown={() => setTurn('up')}
@@ -306,7 +308,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
               ▲
             </button>
             <button
-              className="control-button col-start-1 row-start-2 min-h-11 min-w-11 rounded-l-full border border-line bg-card text-lg text-ink shadow-xs disabled:opacity-45"
+              className="control-button col-start-1 row-start-2 min-h-11 min-w-11 rounded-xl border border-line bg-card text-lg text-ink shadow-xs disabled:opacity-45"
               disabled={!controlsEnabled}
               aria-label="Turn left"
               onPointerDown={() => setTurn('left')}
@@ -314,7 +316,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
               ◀
             </button>
             <button
-              className="control-button col-start-2 row-start-3 min-h-11 min-w-11 rounded-b-full border border-line bg-card text-lg text-ink shadow-xs disabled:opacity-45"
+              className="control-button col-start-2 row-start-3 min-h-11 min-w-11 rounded-xl border border-line bg-card text-lg text-ink shadow-xs disabled:opacity-45"
               disabled={!controlsEnabled}
               aria-label="Turn down"
               onPointerDown={() => setTurn('down')}
@@ -322,7 +324,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
               ▼
             </button>
             <button
-              className="control-button col-start-3 row-start-2 min-h-11 min-w-11 rounded-r-full border border-line bg-card text-lg text-ink shadow-xs disabled:opacity-45"
+              className="control-button col-start-3 row-start-2 min-h-11 min-w-11 rounded-xl border border-line bg-card text-lg text-ink shadow-xs disabled:opacity-45"
               disabled={!controlsEnabled}
               aria-label="Turn right"
               onPointerDown={() => setTurn('right')}
@@ -330,11 +332,11 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
               ▶
             </button>
           </div>
-          <div className="pointer-events-none absolute bottom-[92px] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-ink/10 bg-white px-3.5 py-2 text-[12px] font-semibold text-ink shadow-sm">
+          <div className="match-hint pointer-events-none absolute bottom-[94px] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-xl border border-white/75 bg-white/88 px-3.5 py-2 text-[12px] font-bold text-ink shadow-xs backdrop-blur-xs">
             {hud.boosting ? 'Boosting · tail burns' : 'Hold boost to speed up'}
           </div>
           <button
-            className="control-button h-24 w-24 rounded-full border-[6px] border-white/80 bg-lemon text-sm font-black text-ink shadow-[0_5px_0_#d6be28] disabled:opacity-45"
+            className={`boost-button control-button h-24 w-24 rounded-2xl border-4 border-white/80 bg-lemon text-sm font-black text-ink shadow-[0_5px_0_#d6be28] disabled:opacity-45 ${hud.boosting ? 'is-boosting' : ''}`}
             disabled={!controlsEnabled}
             onPointerDown={() => setBoost(true)}
             onPointerUp={() => setBoost(false)}
@@ -347,20 +349,23 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
       </div>
 
       {result && (
-        <div className="fixed inset-0 z-10 flex flex-col items-center justify-center gap-2.5 bg-cream/95 text-center">
+        <div className="result-backdrop fixed inset-0 z-10 grid place-items-center bg-ink/55 p-5 text-center backdrop-blur-xs">
+          <div className="result-panel w-full max-w-sm rounded-2xl border border-white/70 bg-cream p-6 shadow-[0_24px_70px_rgb(23_34_53_/_28%)] sm:p-8">
+          <div className="result-emblem mx-auto grid h-11 w-11 place-items-center rounded-full bg-coral text-sm font-black text-white">{result.outcome === 'win' ? 'W' : result.outcome === 'loss' ? 'L' : 'D'}</div>
           <p className="m-0 text-xs font-bold uppercase tracking-[0.18em] text-muted">Match result</p>
           <h2 className="result-hero m-0 text-4xl font-black">{result.outcome === 'win' ? 'You win' : result.outcome === 'loss' ? 'Rival wins' : 'Draw'}</h2>
-          <p className="result-score m-0 text-lg font-bold tabular-nums">{result.you.score.toLocaleString()} score</p>
+          <div className="result-score mx-auto rounded-2xl border border-line bg-white px-4 py-3"><span className="block text-[10px] font-black uppercase tracking-[0.14em] text-muted">Your score</span><strong className="mt-1 block text-3xl font-black leading-none tabular-nums">{result.you.score.toLocaleString()}</strong></div>
           <p className="result-detail m-0 mb-2 text-sm text-muted">{result.you.length} segments · <span className="font-semibold text-teal">Score verified</span></p>
           <button
-            className="w-[210px] cursor-pointer rounded-[14px] border-none bg-coral p-4 text-xl font-extrabold text-white shadow-[0_6px_0_var(--color-coral-dark)] active:translate-y-[3px] active:shadow-[0_3px_0_var(--color-coral-dark)]"
+            className="button-primary mt-4 min-h-14 w-full rounded-2xl border-none bg-coral p-4 text-xl font-extrabold text-white"
             onClick={handleRematch}
           >
             Rematch
           </button>
-          <div className="flex gap-2">
+          <div className="mt-3 grid grid-cols-2 gap-2">
             <button className="min-h-11 rounded-full border border-line bg-card px-4 text-sm font-bold text-ink" onClick={() => void shareResult()} disabled={sharing}>{sharing ? 'Sharing…' : 'Share'}</button>
             <button className="min-h-11 rounded-full border border-line bg-card px-4 text-sm font-bold text-ink" onClick={onExit}>Lobby</button>
+          </div>
           </div>
         </div>
       )}

@@ -1,12 +1,14 @@
 # AI_HANDOFF — Competitive Snake (Nimiq Mini App)
 
-**Handoff written:** 2026-08-19 · **Next session should start here.**
+**Handoff written:** 2026-08-20 · **Next session should start here.**
 
 Read, in order: `docs/AI_HANDOFF.md` → `docs/lifecycle/INDEX.md` → `docs/PROJECT_PROGRESS.md` → `COMPETITIVE_SNAKE_GAME.md` → `architecture/ARCHITECTURE.md` (as needed).
 
 ---
 
 ## Where we are
+
+The UI received a restrained premium polish pass: the Fresh Rink palette is slightly deeper and more legible, primary coral actions use shared lift/press feedback, and reduced-motion behavior remains supported. This is intentionally a UI-only change; gameplay and sim behavior are untouched.
 
 Latest UI pass adds Nunito and motion tokens, render-only pellet particles, an animated lobby character, a frosted match HUD with timer/shrink readout, and shared Phaser rendering for Today's Run. Verification is currently blocked by Node EPERM resolving `C:\\Users\\USER` in this environment.
 

@@ -163,6 +163,7 @@
 | D38 | **W1 shipped `/api/v1/runs/verify`** (replay + `UNIQUE(day, log_hash)` dedupe + attestation gate) and the SQLite schema — ahead of the W2 roadmap | ✅ Done |
 | D39 | **Client W1 = local bot matches** (spike path: client owns the sim) + render-only Phaser scene + rotated overlay (D11); room-code PvP client wiring deferred to W2 per roadmap | ✅ Done |
 | D40 | **W2 UI implementation = Fresh Rink application shell + code-split Lawn League renderer.** Lobby, match HUD/controls/result/share, and Today's Run states are mobile-first with safe-area handling, 44px controls, restrained motion, and reduced-motion fallbacks. Phaser/Today's Run load on demand; initial app JS is ~102 kB gzip. Exact collision-loss reasons remain deferred until the authoritative sim exposes a cause via a deliberate versioned contract. | ✅ Done |
+| D41 | **Fresh Rink interaction polish:** retain the warm, friendly lawn identity while increasing ink/muted contrast and standardizing primary coral buttons on restrained lift/press motion. Coral remains the primary action color; lemon is reserved for boost/reward emphasis; reduced-motion fallbacks remain mandatory. | ✅ Approved |
 
 ---
 

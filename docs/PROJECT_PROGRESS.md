@@ -1,6 +1,6 @@
 # PROJECT_PROGRESS — Competitive Snake (Nimiq Mini App)
 
-**Updated:** 2026-08-19 · **Phase:** W2 client UI and wallet integration · **Next milestone:** real-device Nimiq Pay pass
+**Updated:** 2026-08-20 · **Phase:** W2 client UI and wallet integration · **Next milestone:** real-device Nimiq Pay pass
 
 Source of truth: `COMPETITIVE_SNAKE_GAME.md` · Architecture: `architecture/ARCHITECTURE.md` · Lifecycle: [`docs/lifecycle/INDEX.md`](./lifecycle/INDEX.md) · Handoff: `docs/AI_HANDOFF.md`
 
