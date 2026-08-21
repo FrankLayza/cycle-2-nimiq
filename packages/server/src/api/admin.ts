@@ -17,8 +17,14 @@ export function registerAdmin(app: FastifyInstance): void {
 
   app.post('/api/v1/admin/payouts/daily', async (req, reply) => {
     if (!adminTokenOk(req)) return reply.code(401).send({ error: 'unauthorized' });
-    // W2: payout pipeline (D17/D32) — cron 23:55 UTC, re-verify + attestation +
-    // idempotency, then the signer pays top-3 from our pool (testnet first).
-    return { payouts: [], note: 'W2 — payout pipeline not implemented yet' };
+    const day = String((req.query as { day?: unknown } | undefined)?.day ?? new Date().toISOString().slice(0, 10));
+    if (!process.env.REWARD_SIGNER_KEY) {
+      return reply.code(503).send({ error: 'reward signer is not configured', day, payouts: [] });
+    }
+    return reply.code(501).send({
+      error: 'reward transaction broadcasting is not configured',
+      day,
+      payouts: [],
+    });
   });
 }

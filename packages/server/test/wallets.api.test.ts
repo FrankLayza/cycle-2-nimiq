@@ -47,8 +47,8 @@ describe('wallet profile API', () => {
   it('returns the verified daily leaderboard', async () => {
     const app = buildApp();
     const db = (await import('../src/db/client.js')).getDb();
-    db.prepare(`INSERT INTO runs (id, day, wallet, seed, sim_version, mode, inputs, log_hash, score, length, status, attested_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'verified', ?)`)
-      .run('run-1', '2026-08-19', ADDRESS, 1, 1, 'solo', '[]', 'hash-1', 12, 3, Date.now());
+    db.prepare(`INSERT INTO runs (id, day, wallet, seed, sim_version, mode, inputs, log_hash, score, length, status, attested_at, attestation) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'verified', ?, ?)`)
+      .run('run-1', '2026-08-19', ADDRESS, 1, 1, 'solo', '[]', 'hash-1', 12, 3, Date.now(), '');
     const response = await app.inject({ method: 'GET', url: `/api/v1/leaderboard/today?date=2026-08-19&wallet=${ADDRESS}` });
     expect(response.statusCode).toBe(200);
     expect(response.json().entries[0]).toMatchObject({ rank: 1, wallet: ADDRESS, score: 12 });

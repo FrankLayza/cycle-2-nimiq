@@ -7,7 +7,7 @@ import type { AppliedInput } from '@snake/sim';
 import { buildApp } from '../src/app.js';
 import { closeDb } from '../src/db/client.js';
 import { dailySeed } from '../src/services/seed.js';
-import { attestationMessage } from '../src/api/runs.js';
+import { attestationMessage } from '../src/services/attestation.js';
 import { KeyPair, PrivateKey } from '@nimiq/core';
 
 const DAY = '2026-08-17';

@@ -6,14 +6,10 @@ import { loadConfig } from '../config.js';
 import { getDb } from '../db/client.js';
 import { dailySeed, todayUtc } from '../services/seed.js';
 import { REWARD_TIERS } from './rewards.js';
-import { verifyNimiqAttestation } from '../services/attestation.js';
+import { attestationMessage, verifyNimiqAttestation } from '../services/attestation.js';
 
 export function logHashOf(inputs: AppliedInput[][]): string {
   return createHash('sha256').update(JSON.stringify(inputs)).digest('hex');
-}
-
-export function attestationMessage(day: string, seed: number, score: number, runId: string): string {
-  return `snake-rink:today:${runId}:${day}:${seed}:${score}`;
 }
 
 export function registerRuns(app: FastifyInstance): void {
@@ -85,8 +81,8 @@ export function registerRuns(app: FastifyInstance): void {
     const db = getDb();
     try {
       db.prepare(
-        `INSERT INTO runs (id, day, wallet, seed, sim_version, mode, inputs, log_hash, score, length, status, attested_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'verified', ?)`,
+        `INSERT INTO runs (id, day, wallet, seed, sim_version, mode, inputs, log_hash, score, length, status, attested_at, attestation)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'verified', ?, ?)`,
       ).run(
         record.id,
         day,
@@ -99,6 +95,7 @@ export function registerRuns(app: FastifyInstance): void {
         res.score,
         0,
         record.attestedAt,
+        record.attestation,
       );
     } catch (err) {
       if (String(err).includes('UNIQUE constraint failed')) {

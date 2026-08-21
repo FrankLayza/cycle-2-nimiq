@@ -6,6 +6,10 @@ export interface NimiqAttestation {
   signature: string;
 }
 
+export function attestationMessage(day: string, seed: number, score: number, runId: string): string {
+  return `snake-rink:today:${runId}:${day}:${seed}:${score}`;
+}
+
 export function verifyNimiqAttestation(attestation: NimiqAttestation, wallet: string): boolean {
   try {
     const publicKey = PublicKey.fromHex(attestation.publicKey);

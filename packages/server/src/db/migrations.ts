@@ -29,6 +29,7 @@ const MIGRATIONS: string[] = [
     length INTEGER NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending',
     attested_at INTEGER NOT NULL,
+    attestation TEXT NOT NULL DEFAULT '',
     UNIQUE(day, log_hash)
   );
   CREATE INDEX IF NOT EXISTS idx_runs_day_score ON runs(day, score DESC);
@@ -54,6 +55,7 @@ const MIGRATIONS: string[] = [
     paid_at INTEGER
   );
   CREATE INDEX IF NOT EXISTS idx_payouts_status ON payouts(status);
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_payouts_run_id ON payouts(run_id);
   `,
   `
   CREATE TABLE IF NOT EXISTS rooms (
@@ -69,4 +71,8 @@ const MIGRATIONS: string[] = [
 
 export function migrate(db: Database): void {
   for (const sql of MIGRATIONS) db.exec(sql);
+  const runColumns = db.prepare('PRAGMA table_info(runs)').all() as Array<{ name: string }>;
+  if (!runColumns.some((column) => column.name === 'attestation')) {
+    db.exec("ALTER TABLE runs ADD COLUMN attestation TEXT NOT NULL DEFAULT ''");
+  }
 }
