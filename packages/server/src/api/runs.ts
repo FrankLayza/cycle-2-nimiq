@@ -7,6 +7,7 @@ import { getDb } from '../db/client.js';
 import { dailySeed, todayUtc } from '../services/seed.js';
 import { REWARD_TIERS } from './rewards.js';
 import { attestationMessage, verifyNimiqAttestation } from '../services/attestation.js';
+import { normalizeNimiqAddress } from './wallets.js';
 
 export function logHashOf(inputs: AppliedInput[][]): string {
   return createHash('sha256').update(JSON.stringify(inputs)).digest('hex');
@@ -34,15 +35,16 @@ export function registerRuns(app: FastifyInstance): void {
     const day = body.day ?? todayUtc();
     const seed = Number(body.seed);
     const version = Number(body.simVersion);
-    const wallet = String(body.wallet ?? '');
+    const wallet = normalizeNimiqAddress(String(body.wallet ?? ''));
     const inputs = body.inputs as AppliedInput[][] | undefined;
     const reportedScore = Number(body.reportedScore);
     const attestation = body.attestation as { message?: string; publicKey?: string; signature?: string } | undefined;
     const runId = String(body.id ?? '');
 
-    if (!inputs || !wallet || !Number.isFinite(seed) || !Number.isFinite(reportedScore)) {
-      return reply.code(400).send({ error: 'missing fields: inputs, wallet, seed, reportedScore' });
+    if (!inputs || !Number.isFinite(seed) || !Number.isFinite(reportedScore)) {
+      return reply.code(400).send({ error: 'missing fields: inputs, seed, reportedScore' });
     }
+    if (!wallet) return reply.code(400).send({ error: 'invalid Nimiq wallet address' });
     if (seed !== dailySeed(day, cfg.seedSalt)) {
       return reply.code(400).send({ error: 'seed does not match the day' });
     }

@@ -1,9 +1,13 @@
 import type { FastifyInstance } from 'fastify';
+import { Address } from '@nimiq/core';
 import { getDb } from '../db/client.js';
 
 export function normalizeNimiqAddress(value: string): string | null {
-  const address = value.replace(/\s+/g, '').toUpperCase();
-  return /^NQ[0-9A-HJ-NP-Z]{34}$/.test(address) ? address : null;
+  try {
+    return Address.fromString(value.replace(/\s+/g, '').toUpperCase()).toUserFriendlyAddress();
+  } catch {
+    return null;
+  }
 }
 
 export function registerWallets(app: FastifyInstance): void {

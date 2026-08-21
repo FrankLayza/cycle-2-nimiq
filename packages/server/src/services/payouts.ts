@@ -72,6 +72,7 @@ function reverify(row: VerifiedRunRow): boolean {
   const replayed = replay(row.seed, row.sim_version, inputs, 'solo');
   const score = replayed.snakes[0].score + replayed.snakes[0].length + replayed.ticks;
   return score === row.score
+    && replayed.snakes[0].length === row.length
     && attestation.message === attestationMessage(row.day, row.seed, row.score, row.id)
     && verifyNimiqAttestation(attestation, row.wallet);
 }

@@ -4,8 +4,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildApp } from '../src/app.js';
 import { closeDb } from '../src/db/client.js';
+import { KeyPair, PrivateKey } from '@nimiq/core';
 
-const ADDRESS = `NQ${'1'.repeat(34)}`;
+const ADDRESS = KeyPair.derive(new PrivateKey(new Uint8Array(32).fill(11))).toAddress().toUserFriendlyAddress();
 let tmp: string;
 
 beforeAll(() => {

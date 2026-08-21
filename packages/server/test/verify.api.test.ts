@@ -100,4 +100,14 @@ describe('POST /api/v1/runs/verify', { timeout: 20000 }, () => {
     expect(res.json().error).toMatch(/attestation/);
     await app.close();
   });
+
+  it('stores a canonical wallet address', async () => {
+    const app = buildApp();
+    const payload = validPayload([[{ turn: 'left', boost: false }]], 'canonical-wallet-run');
+    payload.wallet = payload.wallet.replace(/\s+/g, '').toLowerCase();
+    const response = await app.inject({ method: 'POST', url: '/api/v1/runs/verify', payload });
+    expect(response.statusCode).toBe(200);
+    expect(getDb().prepare('SELECT wallet FROM runs WHERE id = ?').get(payload.id)).toEqual({ wallet: WALLET });
+    await app.close();
+  });
 });
