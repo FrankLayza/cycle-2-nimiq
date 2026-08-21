@@ -9,14 +9,18 @@
   --color-coral: #ff686b;
   --color-coral-soft: #ffc5c5;
   --color-coral-dark: #d94f4f;
+  /* AA-safe coral for small text on cream/card surfaces (4.8:1+). */
+  --color-coral-deep: #b94242;
   --color-lemon: #f7e04d;
   --color-teal-soft: #a8f3c5;
   --color-grass: #5b9e4a;
   --color-grass-light: #8fd46a;
   --color-grass-soft: #e8f4df;
+  /* AA-safe green for small text on cream/card surfaces (4.7:1). */
+  --color-grass-deep: #3f7a33;
   --color-lemon-soft: #fff9d8;
   --color-card: #ffffff;
-  --color-muted: #7d8797;
+  --color-muted: #5f6b7d;
   --color-line: #e3e0d8;
 }
 
@@ -55,12 +59,13 @@
   .match-controls { bottom: max(.75rem, env(safe-area-inset-bottom)); }
   .match-hud > div { min-width: 4.5rem; padding: .5rem .75rem; }
   .match-hud b { font-size: 1.25rem; }
-  .match-controls > div:first-child { scale: .9; transform-origin: bottom left; }
-  .match-controls > button:last-child { width: 5.25rem; height: 5.25rem; border-width: 4px; }
+  .match-controls .game-pad { scale: .9; transform-origin: bottom left; }
+  .match-controls .boost-button { width: 5.25rem; height: 5.25rem; border-width: 4px; }
 }
 
 :root {
-  --ease-pop: cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  /* Overshoot-free "pop": keeps results snappy without bounce easing. */
+  --ease-pop: cubic-bezier(0.26, 1, 0.4, 1);
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
 }
@@ -129,7 +134,7 @@ button:disabled { cursor: not-allowed; }
 }
 
 .status-pop {
-  animation: status-pop 360ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  animation: status-pop 360ms var(--ease-pop) both;
   max-width: 28rem;
   margin-inline: auto;
   padding: 1.75rem;
@@ -146,10 +151,8 @@ button:disabled { cursor: not-allowed; }
 .result-detail { animation: result-rise 500ms var(--ease-out) 300ms both; }
 .result-backdrop { animation: result-backdrop 220ms ease-out both; }
 .result-panel { animation: result-panel 360ms var(--ease-pop) both; }
-.result-emblem { animation: result-emblem 420ms var(--ease-pop) 100ms both; }
 @keyframes result-backdrop { from { opacity: 0; } to { opacity: 1; } }
 @keyframes result-panel { from { opacity: 0; transform: translateY(12px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
-@keyframes result-emblem { from { opacity: 0; transform: scale(.7); } to { opacity: 1; transform: scale(1); } }
 @keyframes result-hero { from { opacity: 0; transform: scale(.78); } to { opacity: 1; transform: scale(1); } }
 @keyframes result-rise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 

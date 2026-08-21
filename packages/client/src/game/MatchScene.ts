@@ -92,7 +92,7 @@ export class MatchScene extends Phaser.Scene {
     for (const key of this.previousPellets) {
       if (!pelletKeys.has(key)) {
         const [px, py] = key.split(':').map(Number);
-        for (let i = 0; i < 6; i++) this.particles.push({ x: this.offX + (px + 0.5) * this.cellPx, y: (py + 0.5) * this.cellPx, born: time + i * 12, color: 0xf7e04d });
+        for (let i = 0; i < 6; i++) this.particles.push({ x: this.offX + (px + 0.5) * this.cellPx, y: this.offY + (py + 0.5) * this.cellPx, born: time + i * 12, color: 0xf7e04d });
       }
     }
     this.previousPellets = pelletKeys;

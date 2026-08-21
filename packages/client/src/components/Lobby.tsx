@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { normalizeRoomCode } from '../net/client';
 
 interface Props {
@@ -15,6 +15,26 @@ export function Lobby({ wallet, onConnectWallet, onPlay, onPvp, onToday, onCreat
   const params = new URLSearchParams(window.location.search);
   const [code, setCode] = useState(normalizeRoomCode(params.get('room') ?? ''));
   const [open, setOpen] = useState(Boolean(params.get('room')));
+  const [streak, setStreak] = useState<number | null>(null);
+
+  useEffect(() => {
+    setStreak(null);
+    if (!wallet) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL ?? '/api/v1'}/wallet/${wallet.address}`);
+        if (!response.ok) return;
+        const body = (await response.json()) as { profile?: { streak?: number } };
+        if (!cancelled && body.profile) setStreak(body.profile.streak ?? 0);
+      } catch {
+        /* server unreachable: footer stays quiet rather than inventing a streak */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [wallet]);
 
   return (
     <main className="lobby-shell mx-auto flex min-h-full w-full max-w-lg flex-col px-5 py-6 sm:justify-center">
@@ -43,10 +63,10 @@ export function Lobby({ wallet, onConnectWallet, onPlay, onPvp, onToday, onCreat
           <div className="character-snake character-snake-teal"><i /><i /><i /><b><span /><span /></b></div>
           <span className="pickup-mark" />
         </div>
-        <p className="m-0 text-xs font-bold uppercase tracking-[0.2em] text-coral">Quick 1v1 battles</p>
+        <p className="m-0 text-xs font-bold uppercase tracking-[0.2em] text-coral-deep">Quick 1v1 battles</p>
         <h2 className="mt-2 text-3xl font-black tracking-tight sm:text-4xl">Grow. Boost. Outplay.</h2>
         <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-muted">Be the last snake standing in a fast, skill-first match.</p>
-        <button className="button-primary control-button mt-6 min-h-14 w-full rounded-2xl border-none bg-coral px-6 text-xl font-black text-white" onClick={onPlay}>
+        <button className="button-primary control-button mt-6 min-h-14 w-full rounded-2xl border-none bg-coral px-6 text-xl font-black text-ink" onClick={onPlay}>
           PLAY NOW
         </button>
         <p className="mt-3 text-xs font-semibold text-muted">Free play · no wallet required</p>
@@ -63,13 +83,19 @@ export function Lobby({ wallet, onConnectWallet, onPlay, onPvp, onToday, onCreat
         </button>
       </section>
 
-      {open && <form className="room-form screen-enter mt-3 flex gap-2 rounded-2xl border border-line bg-card p-3 shadow-xs" onSubmit={(event) => { event.preventDefault(); if (code.length === 4) onPvp(code); }}>
-        <input autoFocus value={code} onChange={(event) => setCode(event.target.value.toUpperCase().replace(/[^0-9A-HJ-KM-NP-TV-Z]/g, '').slice(0, 4))} maxLength={4} placeholder="ABCD" aria-label="Room code" className="min-h-11 min-w-0 flex-1 rounded-xl border border-line bg-cream px-3 text-center font-black tracking-[0.35em] outline-hidden" />
-        <button className="min-h-11 rounded-xl bg-teal px-4 font-black text-ink shadow-sm disabled:opacity-45" type="submit" disabled={code.length !== 4}>Join</button>
-      </form>}
+      {open && <section className="room-form screen-enter mt-3 rounded-2xl border border-line bg-card p-3 shadow-xs">
+        <form className="flex gap-2" onSubmit={(event) => { event.preventDefault(); if (code.length === 4) onPvp(code); }}>
+          <input autoFocus value={code} onChange={(event) => setCode(event.target.value.toUpperCase().replace(/[^0-9A-HJ-KM-NP-TV-Z]/g, '').slice(0, 4))} maxLength={4} placeholder="ABCD" aria-label="Room code" className="min-h-11 min-w-0 flex-1 rounded-xl border border-line bg-cream px-3 text-center font-black tracking-[0.35em] outline-hidden" />
+          <button className="min-h-11 rounded-xl bg-teal px-4 font-black text-ink shadow-sm disabled:opacity-45" type="submit" disabled={code.length !== 4}>Join</button>
+        </form>
+        <button className="mt-2 min-h-11 w-full rounded-xl border border-line bg-cream px-4 text-sm font-black text-ink" type="button" onClick={onCreateRoom}>
+          Create a room
+        </button>
+        {roomError && <p className="m-0 mt-2 text-sm font-semibold text-coral-deep" role="alert">{roomError}</p>}
+      </section>}
 
       <footer className="lobby-footer mt-5 flex items-center justify-between text-xs font-semibold text-muted">
-        <span>0 day streak</span>
+        <span>{!wallet ? 'Connect to earn streaks' : streak === null ? 'Play Today’s Run to start a streak' : `${streak} day${streak === 1 ? '' : 's'} streak`}</span>
         <span>Verified scores · team-funded rewards</span>
       </footer>
     </main>

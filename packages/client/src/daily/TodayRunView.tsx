@@ -5,6 +5,8 @@ import type { AppliedInput, Dir, GameState } from '@snake/sim';
 import { signWalletMessage } from '../wallet/provider';
 import { MatchScene } from '../game/MatchScene';
 import { snapshotFromGame } from '../game/renderState';
+import { useKeyboardControls } from '../game/useKeyboard';
+import { GameControls } from '../components/GameControls';
 
 interface Props { wallet: { address: string } | null; onExit: () => void }
 type Phase = 'loading' | 'ready' | 'playing' | 'signing' | 'submitting' | 'verified' | 'error';
@@ -23,6 +25,8 @@ export function TodayRunView({ wallet, onExit }: Props) {
   const [state, setState] = useState<GameState | null>(null);
   const [error, setError] = useState('');
   const [result, setResult] = useState<{ score: number; rank?: number; rewardTier?: { rank: number; nim: number } } | null>(null);
+  const [tiers, setTiers] = useState<Array<{ rank: number; nim: number }> | null>(null);
+  const [personal, setPersonal] = useState<{ rank: number; score: number } | null>(null);
   const inputs = useRef<AppliedInput[]>([]);
   const pending = useRef<AppliedInput>({ turn: null, boost: false });
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
@@ -44,6 +48,33 @@ export function TodayRunView({ wallet, onExit }: Props) {
       .catch((reason: unknown) => { if (!cancelled) { setError(reason instanceof Error ? reason.message : 'Could not prepare today\'s field.'); setPhase('error'); } });
     return () => { cancelled = true; };
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const api = import.meta.env.VITE_API_URL ?? '/api/v1';
+    void (async () => {
+      try {
+        const response = await fetch(`${api}/rewards/schedule`);
+        if (response.ok) {
+          const body = (await response.json()) as { daily?: Array<{ rank: number; nim: number }> };
+          if (!cancelled && body.daily?.length) setTiers(body.daily);
+        }
+      } catch {
+        /* schedule unavailable: hide the tier row rather than inventing amounts */
+      }
+      if (!wallet) return;
+      try {
+        const response = await fetch(`${api}/leaderboard/today?wallet=${encodeURIComponent(wallet.address)}`);
+        if (response.ok) {
+          const body = (await response.json()) as { personal: { rank: number; score: number } | null };
+          if (!cancelled && body.personal) setPersonal({ rank: body.personal.rank, score: body.personal.score });
+        }
+      } catch {
+        /* leaderboard unavailable: keep the honest "no score yet" state */
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [wallet]);
 
   useEffect(() => {
     if (phase !== 'playing') return;
@@ -97,6 +128,8 @@ export function TodayRunView({ wallet, onExit }: Props) {
   };
 
   const turn = (direction: Dir) => { pending.current = { ...pending.current, turn: direction }; };
+  const boost = (value: boolean) => { pending.current = { ...pending.current, boost: value }; };
+  useKeyboardControls(phase === 'playing', turn, boost);
   const finishSwipe = (x: number, y: number) => {
     const start = swipeStart.current;
     swipeStart.current = null;
@@ -124,10 +157,12 @@ export function TodayRunView({ wallet, onExit }: Props) {
         </section>
 
         <div className="flex shrink-0 items-end justify-between gap-4 pb-[max(0px,env(safe-area-inset-bottom))]">
-          <div className="grid grid-cols-3 grid-rows-2 gap-1 rounded-2xl border border-white/20 bg-white/10 p-2">
-            {([['up', '▲', 'col-start-2 row-start-1'], ['left', '◀', 'col-start-1 row-start-2'], ['down', '▼', 'col-start-2 row-start-2'], ['right', '▶', 'col-start-3 row-start-2']] as const).map(([direction, label, position]) => <button key={direction} aria-label={`Turn ${direction}`} onPointerDown={() => turn(direction)} className={`control-button ${position} min-h-11 min-w-11 rounded-xl border border-white/25 bg-ink/20 text-white active:bg-ink/35`}>{label}</button>)}
-          </div>
-          {terminal ? <button className="button-primary min-h-14 flex-1 rounded-2xl bg-lemon px-5 font-black text-ink shadow-sm" onClick={() => void finish()}>VERIFY MY SCORE</button> : <button className="control-button h-20 w-28 rounded-2xl border-4 border-white/80 bg-lemon font-black text-ink shadow-[0_5px_0_#d6be28] active:scale-95" onPointerDown={() => { pending.current = { ...pending.current, boost: true }; }} onPointerUp={() => { pending.current = { ...pending.current, boost: false }; }} onPointerCancel={() => { pending.current = { ...pending.current, boost: false }; }}>BOOST</button>}
+          <GameControls
+            variant="dark"
+            onTurn={turn}
+            onBoostChange={boost}
+            trailing={terminal ? <button className="button-primary min-h-14 flex-1 rounded-2xl bg-lemon px-5 font-black text-ink shadow-sm" onClick={() => void finish()}>VERIFY MY SCORE</button> : undefined}
+          />
         </div>
       </div>
     </main>;
@@ -135,22 +170,28 @@ export function TodayRunView({ wallet, onExit }: Props) {
 
   return <main className="min-h-full overflow-y-auto bg-cream px-5 pb-[max(24px,env(safe-area-inset-bottom))] pt-[max(24px,env(safe-area-inset-top))]">
     <div className="screen-enter mx-auto flex min-h-full w-full max-w-lg flex-col">
-      <header className="flex items-center justify-between"><button className="min-h-11 rounded-full border border-line bg-card px-4 text-sm font-bold" onClick={onExit}>Lobby</button><span className="text-xs font-bold uppercase tracking-[0.16em] text-muted">Daily challenge</span></header>
+      <header className="flex items-center justify-between"><button className="min-h-11 rounded-full border border-line bg-card px-4 text-sm font-bold" onClick={onExit}>Lobby</button></header>
 
       {phase === 'loading' && <section className="grid flex-1 place-items-center text-center"><div><div className="loading-snake mx-auto mb-5 h-8 w-24 rounded-full bg-teal" /><h1 className="text-2xl font-black">Preparing today&apos;s field…</h1></div></section>}
 
       {phase === 'ready' && challenge && <>
-        <section className="daily-hero mt-8 text-center"><p className="text-xs font-black uppercase tracking-[0.2em] text-coral">{displayDate(challenge.date)}</p><h1 className="mt-2 text-4xl font-black tracking-tight">Today&apos;s Run</h1><p className="mx-auto mt-3 max-w-sm text-base font-bold leading-6 text-muted">Same field. Same conditions. Pure skill.</p></section>
-        <section className="mt-7 rounded-2xl border border-line bg-card p-5 shadow-sm"><div className="flex items-center justify-between border-b border-line pb-4"><div><p className="m-0 text-xs font-black uppercase tracking-[0.14em] text-muted">Your best</p><p className="m-0 mt-1 text-2xl font-black">No score yet</p></div><span className="rounded-xl bg-grass-soft px-3 py-2 text-xs font-black text-grass">Fresh field</span></div><div className="grid grid-cols-3 gap-2 pt-4 text-center"><div><b className="block text-lg">30</b><span className="text-xs text-muted">1st NIM</span></div><div><b className="block text-lg">20</b><span className="text-xs text-muted">2nd NIM</span></div><div><b className="block text-lg">10</b><span className="text-xs text-muted">3rd NIM</span></div></div></section>
+        <section className="daily-hero mt-8 text-center"><p className="text-xs font-black uppercase tracking-[0.2em] text-coral-deep">{displayDate(challenge.date)}</p><h1 className="mt-2 text-4xl font-black tracking-tight">Today&apos;s Run</h1><p className="mx-auto mt-3 max-w-sm text-base font-bold leading-6 text-muted">Same field. Same conditions. Pure skill.</p></section>
+        <section className="mt-7 rounded-2xl border border-line bg-card p-5 shadow-sm">
+          <div className="flex items-center justify-between border-b border-line pb-4">
+            <div><p className="m-0 text-xs font-black uppercase tracking-[0.14em] text-muted">Your best</p><p className="m-0 mt-1 text-2xl font-black tabular-nums">{personal ? personal.score.toLocaleString() : 'No score yet'}</p></div>
+            <span className={`rounded-xl px-3 py-2 text-xs font-black ${personal ? 'bg-teal-soft text-grass' : 'bg-grass-soft text-grass'}`}>{personal ? `Rank #${personal.rank} today` : 'Fresh field'}</span>
+          </div>
+          {tiers && <div className="grid grid-cols-3 gap-2 pt-4 text-center">{tiers.map((tier) => <div key={tier.rank}><b className="block text-lg tabular-nums">{tier.nim}</b><span className="text-xs text-muted">{['1st', '2nd', '3rd'][tier.rank - 1] ?? `${tier.rank}th`} NIM</span></div>)}</div>}
+        </section>
         {!wallet && <p className="mt-4 rounded-2xl border border-[#eadb7a] bg-lemon-soft p-4 text-center text-sm font-bold text-ink">Connect your wallet from the lobby to enter the verified leaderboard.</p>}
-        <button disabled={!wallet} onClick={() => setPhase('playing')} className="button-primary mt-5 min-h-14 w-full rounded-2xl bg-coral px-6 text-xl font-black text-white disabled:bg-muted disabled:shadow-none">{wallet ? 'PLAY TODAY\'S RUN' : 'WALLET REQUIRED'}</button>
+        <button disabled={!wallet} onClick={() => setPhase('playing')} className="button-primary mt-5 min-h-14 w-full rounded-2xl bg-coral px-6 text-xl font-black text-ink disabled:bg-muted disabled:shadow-none">{wallet ? 'PLAY TODAY\'S RUN' : 'WALLET REQUIRED'}</button>
       </>}
 
       {(phase === 'signing' || phase === 'submitting') && <section className="grid flex-1 place-items-center text-center"><div className="status-pop"><div className="loading-snake mx-auto mb-5 h-8 w-24 rounded-full bg-teal" /><p className="text-xs font-bold uppercase tracking-[0.18em] text-muted">{phase === 'signing' ? 'Wallet approval' : 'Replay verification'}</p><h1 className="mt-2 text-3xl font-black">{phase === 'signing' ? 'Confirm your score' : 'Checking your run…'}</h1><p className="mt-3 text-sm text-muted">{phase === 'signing' ? 'One signature proves this run belongs to you.' : 'Replaying every move against today\'s field.'}</p></div></section>}
 
-      {phase === 'verified' && result && <section className="status-pop grid flex-1 place-items-center py-8 text-center"><div className="w-full"><p className="text-sm font-bold uppercase tracking-[0.2em] text-teal">Score verified</p><h1 className="mt-2 text-5xl font-black tabular-nums">{result.score.toLocaleString()}</h1><p className="mt-2 text-lg font-bold">{result.rank ? `Rank #${result.rank}` : 'Rank pending'}</p>{result.rewardTier && <div className="mx-auto mt-6 max-w-xs rounded-2xl bg-lemon-soft p-5"><p className="m-0 text-xs font-bold uppercase text-muted">Reward position</p><p className="m-0 mt-1 text-2xl font-black">+{result.rewardTier.nim} NIM</p></div>}<button className="button-primary mt-8 min-h-14 w-full rounded-2xl bg-coral font-black text-white" onClick={onExit}>DONE</button></div></section>}
+      {phase === 'verified' && result && <section className="status-pop grid flex-1 place-items-center py-8 text-center"><div className="w-full"><p className="text-sm font-bold uppercase tracking-[0.2em] text-grass-deep">Score verified</p><h1 className="mt-2 text-5xl font-black tabular-nums">{result.score.toLocaleString()}</h1><p className="mt-2 text-lg font-bold">{result.rank ? `Rank #${result.rank}` : 'Rank pending'}</p>{result.rewardTier && <div className="mx-auto mt-6 max-w-xs rounded-2xl bg-lemon-soft p-5"><p className="m-0 text-xs font-bold uppercase text-muted">Reward position</p><p className="m-0 mt-1 text-2xl font-black">+{result.rewardTier.nim} NIM</p></div>}<button className="button-primary mt-8 min-h-14 w-full rounded-2xl bg-coral font-black text-ink" onClick={onExit}>DONE</button></div></section>}
 
-      {phase === 'error' && <section className="grid flex-1 place-items-center text-center"><div className="status-pop"><p className="text-xs font-bold uppercase tracking-[0.18em] text-coral">Run paused</p><h1 className="mt-2 text-3xl font-black">Something went wrong</h1><p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-muted">{error}</p><button className="mt-6 min-h-12 rounded-2xl bg-ink px-6 font-bold text-white" onClick={onExit}>Return to lobby</button></div></section>}
+      {phase === 'error' && <section className="grid flex-1 place-items-center text-center"><div className="status-pop"><p className="text-xs font-bold uppercase tracking-[0.18em] text-coral-deep">Run paused</p><h1 className="mt-2 text-3xl font-black">Something went wrong</h1><p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-muted">{error}</p><button className="mt-6 min-h-12 rounded-2xl bg-ink px-6 font-bold text-white" onClick={onExit}>Return to lobby</button></div></section>}
     </div>
   </main>;
 }

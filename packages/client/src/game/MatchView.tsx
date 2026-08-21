@@ -6,6 +6,8 @@ import type { Room } from 'colyseus.js';
 import { MatchScene } from './MatchScene';
 import { snapshotFromGame, snapshotFromRoom } from './renderState';
 import { swipeToDir } from './input';
+import { useKeyboardControls } from './useKeyboard';
+import { GameControls } from '../components/GameControls';
 import { createMatchClient, joinPvp } from '../net/client';
 import type { ClientMatchState } from '../net/client';
 
@@ -66,6 +68,13 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
   const [error, setError] = useState('');
   const [result, setResult] = useState<ResultState | null>(null);
   const [sharing, setSharing] = useState(false);
+  const [shareNote, setShareNote] = useState('');
+  const [hasTurned, setHasTurned] = useState(false);
+  const rematchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (rematchTimer.current) clearTimeout(rematchTimer.current);
+  }, []);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -89,46 +98,6 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
 
     if (mode === 'pvp' && roomCode) {
       setPhase('connecting');
-<<<<<<< HEAD
-      const client = createMatchClient();
-      void joinPvp(client, roomCode, wallet)
-        .then((joined) => {
-          if (disposed) {
-            void joined.leave();
-            return;
-          }
-          roomRef.current = joined;
-
-          const applyState = (state: ClientMatchState) => {
-            scene().submitSnapshot(snapshotFromRoom(state));
-            const snakes = Array.from(state.snakes.values());
-            const own = snakes.find((snake) => snake.sessionId === joined.sessionId);
-            const rival = snakes.find((snake) => snake.sessionId !== joined.sessionId);
-            setHud({
-              you: own?.score ?? 0,
-              rival: rival?.score ?? 0,
-              alive: snakes.filter((snake) => snake.alive).length,
-              boundary: state.boundary,
-              seed: state.seed,
-              boosting: own?.boosting ?? false,
-              tick: state.tick,
-            });
-            setCountdown(state.countdown);
-
-            if (state.status === 'lobby') setPhase('waiting');
-            if (state.status === 'countdown') setPhase('countdown');
-            if (state.status === 'playing') setPhase('playing');
-            if (state.status === 'finished' && state.resultJson) {
-              setPhase('finished');
-              const parsed = JSON.parse(state.resultJson) as MatchResultJson;
-              const ownSeat = own?.seat ?? 0;
-              const ownResult = parsed.snakes.find((snake) => snake.id === ownSeat);
-            setResult({
-                outcome: outcomeFor(parsed.winner, ownSeat),
-                you: { score: ownResult?.score ?? 0, length: ownResult?.length ?? 0 },
-              });
-              buzz(phase === 'finished' ? [14, 20, 14] : 8);
-=======
       // React StrictMode mounts effects once, cleans them up, then mounts
       // them again in development. Defer the network join so the probe
       // connection is cancelled before it can occupy a room seat.
@@ -139,12 +108,14 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
             if (disposed) {
               void joined.leave();
               return;
->>>>>>> 187fbf7 (fix: fixed the snake rendering bug)
             }
             roomRef.current = joined;
 
             const applyState = (state: ClientMatchState) => {
-              console.warn('[DEBUG-pvp-state]', state.status, state.tick, Array.from(state.snakes.values()).map((snake) => snake.cells.length));
+              if (state.status !== 'finished' && rematchTimer.current) {
+                clearTimeout(rematchTimer.current);
+                rematchTimer.current = null;
+              }
               scene().submitSnapshot(snapshotFromRoom(state));
               const snakes = Array.from(state.snakes.values());
               const own = snakes.find((snake) => snake.sessionId === joined.sessionId);
@@ -156,6 +127,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
                 boundary: state.boundary,
                 seed: state.seed,
                 boosting: own?.boosting ?? false,
+                tick: state.tick,
               });
               setCountdown(state.countdown);
 
@@ -171,6 +143,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
                   outcome: outcomeFor(parsed.winner, ownSeat),
                   you: { score: ownResult?.score ?? 0, length: ownResult?.length ?? 0 },
                 });
+                buzz(8);
               }
             };
 
@@ -242,7 +215,9 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
       const dx = event.clientX - start.x;
       const dy = event.clientY - start.y;
       if (Math.abs(dx) + Math.abs(dy) > 24) {
-        pendingRef.current = { ...pendingRef.current, turn: swipeToDir(dx, dy) };
+        const dir = swipeToDir(dx, dy);
+        pendingRef.current = { ...pendingRef.current, turn: dir };
+        setHasTurned(true);
       }
       start = null;
     };
@@ -263,15 +238,24 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
 
   const setTurn = (turn: Dir) => {
     pendingRef.current = { ...pendingRef.current, turn };
+    setHasTurned(true);
   };
   const setBoost = (boost: boolean) => {
     pendingRef.current = { ...pendingRef.current, boost };
   };
+  useKeyboardControls(phase === 'playing', setTurn, setBoost);
   const handleRematch = () => {
     if (mode === 'pvp' && roomRef.current) {
       setResult(null);
       setPhase('countdown');
       roomRef.current.send('rematch');
+      if (rematchTimer.current) clearTimeout(rematchTimer.current);
+      rematchTimer.current = setTimeout(() => {
+        if (roomRef.current?.state.status !== 'countdown') {
+          setError('Rematch timed out. Your rival may have left the room.');
+          setPhase('error');
+        }
+      }, 6000);
       return;
     }
     onRematch();
@@ -281,9 +265,15 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
     if (!result) return;
     const text = `${result.outcome === 'win' ? 'I won' : result.outcome === 'draw' ? 'I drew' : 'I scored'} ${result.you.score.toLocaleString()} in Competitive Snake. Grow. Boost. Outplay.`;
     setSharing(true);
+    setShareNote('');
     try {
       if (navigator.share) await navigator.share({ title: 'Competitive Snake', text });
-      else await navigator.clipboard.writeText(text);
+      else {
+        await navigator.clipboard.writeText(text);
+        setShareNote('Copied to clipboard');
+      }
+    } catch {
+      /* user cancelled the share sheet; nothing to report */
     } finally {
       setSharing(false);
     }
@@ -316,9 +306,19 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
             <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-coral-dark">You</span>
             <b key={hud.you} className="score-pop mt-0.5 block text-2xl leading-none tabular-nums">{hud.you.toLocaleString()}</b>
           </div>
-          <div className="match-clock rounded-2xl border border-white/75 bg-ink/90 px-4 py-2.5 text-center font-black text-white shadow-xs backdrop-blur-xs">
-            <span className="block text-lg leading-none tabular-nums">{matchClock}</span>
-            <span className="mt-1 block text-[9px] uppercase tracking-[0.12em] text-coral-soft">Shrink {String(shrinkCountdown).padStart(2, '0')}</span>
+          <div className="flex flex-col items-center gap-1.5">
+            <div className="match-clock rounded-2xl border border-white/75 bg-ink/90 px-4 py-2.5 text-center font-black text-white shadow-xs backdrop-blur-xs">
+              <span className="block text-lg leading-none tabular-nums">{matchClock}</span>
+              <span className="mt-1 block text-[9px] uppercase tracking-[0.12em] text-coral-soft">Shrink {String(shrinkCountdown).padStart(2, '0')}</span>
+            </div>
+            {!result && (
+              <button
+                className="pointer-events-auto min-h-11 rounded-full border border-white/75 bg-white/88 px-4 py-2 text-xs font-black uppercase tracking-[0.08em] text-ink shadow-xs backdrop-blur-xs"
+                onClick={onExit}
+              >
+                Exit match
+              </button>
+            )}
           </div>
           <div className="match-stat min-w-24 rounded-2xl border border-white/75 bg-white/88 px-3.5 py-2.5 text-right text-ink shadow-xs backdrop-blur-xs">
             <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-grass">Rival</span>
@@ -345,66 +345,23 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
         )}
 
         <div className="match-controls absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3">
-          <div className="grid grid-cols-3 grid-rows-3 gap-1 rounded-2xl border border-white/75 bg-white/88 p-2 shadow-xs backdrop-blur-xs">
-            <button
-              className="control-button col-start-2 row-start-1 min-h-11 min-w-11 rounded-xl border border-line bg-card text-lg text-ink shadow-xs disabled:opacity-45"
-              disabled={!controlsEnabled}
-              aria-label="Turn up"
-              onPointerDown={() => setTurn('up')}
-            >
-              ▲
-            </button>
-            <button
-              className="control-button col-start-1 row-start-2 min-h-11 min-w-11 rounded-xl border border-line bg-card text-lg text-ink shadow-xs disabled:opacity-45"
-              disabled={!controlsEnabled}
-              aria-label="Turn left"
-              onPointerDown={() => setTurn('left')}
-            >
-              ◀
-            </button>
-            <button
-              className="control-button col-start-2 row-start-3 min-h-11 min-w-11 rounded-xl border border-line bg-card text-lg text-ink shadow-xs disabled:opacity-45"
-              disabled={!controlsEnabled}
-              aria-label="Turn down"
-              onPointerDown={() => setTurn('down')}
-            >
-              ▼
-            </button>
-            <button
-              className="control-button col-start-3 row-start-2 min-h-11 min-w-11 rounded-xl border border-line bg-card text-lg text-ink shadow-xs disabled:opacity-45"
-              disabled={!controlsEnabled}
-              aria-label="Turn right"
-              onPointerDown={() => setTurn('right')}
-            >
-              ▶
-            </button>
-          </div>
-          <div className="match-hint pointer-events-none absolute bottom-[94px] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-xl border border-white/75 bg-white/88 px-3.5 py-2 text-[12px] font-bold text-ink shadow-xs backdrop-blur-xs">
-            {hud.boosting ? 'Boosting · tail burns' : 'Hold boost to speed up'}
-          </div>
-          <button
-            className={`boost-button control-button h-24 w-24 rounded-2xl border-4 border-white/80 bg-lemon text-sm font-black text-ink shadow-[0_5px_0_#d6be28] disabled:opacity-45 ${hud.boosting ? 'is-boosting' : ''}`}
-            disabled={!controlsEnabled}
-            onPointerDown={() => setBoost(true)}
-            onPointerUp={() => setBoost(false)}
-            onPointerCancel={() => setBoost(false)}
-            onPointerLeave={() => setBoost(false)}
-          >
-            BOOST
-          </button>
+          {!hasTurned && (
+            <div className="match-hint pointer-events-none absolute bottom-[94px] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-xl border border-white/75 bg-white/88 px-3.5 py-2 text-[12px] font-bold text-ink shadow-xs backdrop-blur-xs">
+              {hud.boosting ? 'Boosting · tail burns' : 'Swipe, tap the pad, or use arrow keys'}
+            </div>
+          )}
+          <GameControls variant="light" disabled={!controlsEnabled} boosting={hud.boosting} onTurn={setTurn} onBoostChange={setBoost} />
         </div>
       </div>
 
       {result && (
         <div className="result-backdrop fixed inset-0 z-10 grid place-items-center bg-ink/55 p-5 text-center backdrop-blur-xs">
           <div className="result-panel w-full max-w-sm rounded-2xl border border-white/70 bg-cream p-6 shadow-[0_24px_70px_rgb(23_34_53_/_28%)] sm:p-8">
-          <div className="result-emblem mx-auto grid h-11 w-11 place-items-center rounded-full bg-coral text-sm font-black text-white">{result.outcome === 'win' ? 'W' : result.outcome === 'loss' ? 'L' : 'D'}</div>
-          <p className="m-0 text-xs font-bold uppercase tracking-[0.18em] text-muted">Match result</p>
           <h2 className="result-hero m-0 text-4xl font-black">{result.outcome === 'win' ? 'You win' : result.outcome === 'loss' ? 'Rival wins' : 'Draw'}</h2>
           <div className="result-score mx-auto rounded-2xl border border-line bg-white px-4 py-3"><span className="block text-[10px] font-black uppercase tracking-[0.14em] text-muted">Your score</span><strong className="mt-1 block text-3xl font-black leading-none tabular-nums">{result.you.score.toLocaleString()}</strong></div>
-          <p className="result-detail m-0 mb-2 text-sm text-muted">{result.you.length} segments · <span className="font-semibold text-teal">Score verified</span></p>
+          <p className="result-detail m-0 mb-2 text-sm text-muted">{result.you.length} segments · <span className="font-semibold text-grass-deep">Score verified</span></p>
           <button
-            className="button-primary mt-4 min-h-14 w-full rounded-2xl border-none bg-coral p-4 text-xl font-extrabold text-white"
+            className="button-primary mt-4 min-h-14 w-full rounded-2xl border-none bg-coral p-4 text-xl font-extrabold text-ink"
             onClick={handleRematch}
           >
             Rematch
@@ -413,6 +370,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
             <button className="min-h-11 rounded-full border border-line bg-card px-4 text-sm font-bold text-ink" onClick={() => void shareResult()} disabled={sharing}>{sharing ? 'Sharing…' : 'Share'}</button>
             <button className="min-h-11 rounded-full border border-line bg-card px-4 text-sm font-bold text-ink" onClick={onExit}>Lobby</button>
           </div>
+          {shareNote && <p className="m-0 mt-2 text-xs font-semibold text-grass-deep" role="status">{shareNote}</p>}
           </div>
         </div>
       )}
