@@ -8,10 +8,12 @@ import { buildApp } from '../src/app.js';
 import { closeDb } from '../src/db/client.js';
 import { dailySeed } from '../src/services/seed.js';
 import { attestationMessage } from '../src/api/runs.js';
+import { KeyPair, PrivateKey } from '@nimiq/core';
 
 const DAY = '2026-08-17';
-const WALLET = 'NQ00TEST0000000000000000000000000000000';
 const NOOP: AppliedInput[][] = [[]];
+const TEST_KEY_PAIR = KeyPair.derive(new PrivateKey(new Uint8Array(32).fill(7)));
+const WALLET = TEST_KEY_PAIR.toAddress().toUserFriendlyAddress();
 let tmp: string;
 
 beforeAll(() => {
@@ -29,8 +31,10 @@ function validPayload(inputs: AppliedInput[][] = NOOP, id = 'test-run-1') {
   const seed = dailySeed(DAY, 'test-salt');
   const r = replay(seed, SIM_VERSION, inputs, 'solo');
   const score = r.snakes[0].score + r.snakes[0].length + r.ticks;
+  const message = attestationMessage(DAY, seed, score, id);
+  const signature = TEST_KEY_PAIR.sign(new TextEncoder().encode(message));
   return { id, day: DAY, seed, simVersion: SIM_VERSION, wallet: WALLET, inputs, reportedScore: score,
-    attestation: { message: attestationMessage(DAY, seed, score, id), publicKey: 'fake-key', signature: 'fake-sig' } };
+    attestation: { message, publicKey: TEST_KEY_PAIR.publicKey.toHex(), signature: signature.toHex() } };
 }
 
 /** A different-but-honest run: distinct input log ⇒ distinct log_hash (D29). */

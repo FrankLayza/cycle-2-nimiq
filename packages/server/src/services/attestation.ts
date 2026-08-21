@@ -12,7 +12,7 @@ export function verifyNimiqAttestation(attestation: NimiqAttestation, wallet: st
     const signature = Signature.fromHex(attestation.signature);
     const message = new TextEncoder().encode(attestation.message);
     const expectedAddress = Address.fromString(wallet.replace(/\s+/g, '').toUpperCase());
-    return publicKey.toAddress().equals(expectedAddress) && signature.verify(publicKey, message);
+    return publicKey.toAddress().equals(expectedAddress) && publicKey.verify(signature, message);
   } catch {
     return false;
   }
