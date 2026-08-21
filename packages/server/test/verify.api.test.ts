@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { replay, SIM_VERSION } from '@snake/sim';
 import type { AppliedInput } from '@snake/sim';
 import { buildApp } from '../src/app.js';
-import { closeDb } from '../src/db/client.js';
+import { closeDb, getDb } from '../src/db/client.js';
 import { dailySeed } from '../src/services/seed.js';
 import { attestationMessage } from '../src/services/attestation.js';
 import { KeyPair, PrivateKey } from '@nimiq/core';
@@ -54,6 +54,9 @@ describe('POST /api/v1/runs/verify', { timeout: 20000 }, () => {
     expect(body.score).toBeGreaterThan(0);
     expect(body.rank).toBe(1);
     expect(body.runId).toBeTruthy();
+    expect(getDb().prepare('SELECT length FROM runs WHERE id = ?').get(body.runId)).toEqual({
+      length: replay(validPayload().seed, SIM_VERSION, NOOP, 'solo').snakes[0].length,
+    });
     await app.close();
   });
 

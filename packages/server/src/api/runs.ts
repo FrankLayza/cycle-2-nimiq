@@ -93,7 +93,7 @@ export function registerRuns(app: FastifyInstance): void {
         JSON.stringify(inputs),
         record.logHash,
         res.score,
-        0,
+        res.length,
         record.attestedAt,
         record.attestation,
       );

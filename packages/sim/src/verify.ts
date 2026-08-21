@@ -15,6 +15,7 @@ export function todayScore(seed: number, version: number, inputs: AppliedInput[]
 export interface VerifyResult {
   valid: boolean;
   score: number;
+  length: number;
   reason?: string;
 }
 
@@ -25,18 +26,18 @@ export interface VerifyResult {
  */
 export function verifyRun(record: RunRecord): VerifyResult {
   if (record.simVersion !== SIM_VERSION) {
-    return { valid: false, score: 0, reason: `SIM_VERSION mismatch: ${record.simVersion}` };
+    return { valid: false, score: 0, length: 0, reason: `SIM_VERSION mismatch: ${record.simVersion}` };
   }
   let result;
   try {
     result = replay(record.seed, record.simVersion, record.inputs, record.mode);
   } catch (err) {
-    return { valid: false, score: 0, reason: `replay failed: ${String(err)}` };
+    return { valid: false, score: 0, length: 0, reason: `replay failed: ${String(err)}` };
   }
   const sn = result.snakes[0];
   const score = record.mode === 'solo' ? sn.score + sn.length + result.ticks : sn.score;
   if (score !== record.reportedScore) {
-    return { valid: false, score, reason: `score mismatch: reported ${record.reportedScore}, replayed ${score}` };
+    return { valid: false, score, length: sn.length, reason: `score mismatch: reported ${record.reportedScore}, replayed ${score}` };
   }
-  return { valid: true, score };
+  return { valid: true, score, length: sn.length };
 }
