@@ -53,11 +53,19 @@ describe('daily payouts', () => {
     expect(candidates).toHaveLength(2);
   });
 
-  it('skips a run whose signed message is not canonical', async () => {
+  it('skips a non-canonical winner and promotes the next valid run', async () => {
     insertVerifiedRun('tampered', 3, [[]], 'validly-signed-but-wrong-message');
-    const send = async () => ({ txHash: 'should-not-send' });
-    expect(await settleDaily(DAY, { send })).toEqual([]);
-    expect(getDb().prepare('SELECT COUNT(*) AS count FROM payouts').get()).toEqual({ count: 0 });
+    const wallet = insertVerifiedRun('valid', 4, [[{ turn: 'up', boost: false }]]);
+    const sent: string[] = [];
+    const payouts = await settleDaily(DAY, {
+      async send(recipient) {
+        sent.push(recipient);
+        return { txHash: 'valid-tx' };
+      },
+    });
+    expect(payouts).toHaveLength(1);
+    expect(payouts[0]).toMatchObject({ runId: 'valid', wallet, rank: 1, status: 'sent' });
+    expect(sent).toEqual([wallet]);
   });
 
   it('returns an already-sent payout without broadcasting twice', async () => {

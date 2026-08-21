@@ -23,6 +23,10 @@ export interface PayoutBroadcaster {
   send(wallet: string, amountNim: number): Promise<{ txHash: string }>;
 }
 
+interface EligiblePayout extends PayoutCandidate {
+  row: VerifiedRunRow;
+}
+
 interface VerifiedRunRow {
   id: string;
   wallet: string;
@@ -35,8 +39,7 @@ interface VerifiedRunRow {
   day: string;
 }
 
-/** Selects best verified run per wallet, with deterministic wallet tie-breaking. */
-export function dailyCandidates(day: string): PayoutCandidate[] {
+function eligibleDailyPayouts(day: string): EligiblePayout[] {
   const rows = getDb().prepare(
     `SELECT id, day, wallet, seed, sim_version, inputs, score, length, attestation
      FROM runs
@@ -44,12 +47,15 @@ export function dailyCandidates(day: string): PayoutCandidate[] {
      ORDER BY score DESC, wallet ASC, id ASC`,
   ).all(day) as VerifiedRunRow[];
   const best = new Map<string, VerifiedRunRow>();
-  for (const row of rows) if (!best.has(row.wallet)) best.set(row.wallet, row);
+  for (const row of rows) {
+    if (!best.has(row.wallet) && reverify(row)) best.set(row.wallet, row);
+  }
   return [...best.values()].slice(0, REWARD_TIERS.length).map((row, index) => ({
     runId: row.id,
     wallet: row.wallet,
     amountNim: REWARD_TIERS[index].nim,
     rank: index + 1,
+    row,
   }));
 }
 
@@ -70,13 +76,15 @@ function reverify(row: VerifiedRunRow): boolean {
     && verifyNimiqAttestation(attestation, row.wallet);
 }
 
+/** Selects the best fully re-verified run per wallet, with deterministic tie-breaking. */
+export function dailyCandidates(day: string): PayoutCandidate[] {
+  return eligibleDailyPayouts(day).map(({ row: _row, ...candidate }) => candidate);
+}
+
 export async function settleDaily(day: string, broadcaster: PayoutBroadcaster): Promise<PayoutRecord[]> {
   const db = getDb();
-  const candidates = dailyCandidates(day);
+  const candidates = eligibleDailyPayouts(day);
   const results: PayoutRecord[] = [];
-  const findRun = db.prepare(
-    `SELECT id, day, wallet, seed, sim_version, inputs, score, length, attestation FROM runs WHERE id = ?`,
-  );
   const findExisting = db.prepare(
     `SELECT id, wallet, amount_nim, status, tx_hash, paid_at FROM payouts WHERE run_id = ?`,
   );
@@ -92,8 +100,6 @@ export async function settleDaily(day: string, broadcaster: PayoutBroadcaster): 
       results.push({ id: existing.id, runId: candidate.runId, wallet: existing.wallet, amountNim: existing.amount_nim, rank: candidate.rank, status: 'sent', txHash: existing.tx_hash, paidAt: existing.paid_at });
       continue;
     }
-    const row = findRun.get(candidate.runId) as VerifiedRunRow | undefined;
-    if (!row || !reverify(row)) continue;
     const payoutId = existing?.id ?? `daily:${day}:${candidate.wallet}`;
     if (!existing) insertPending.run(payoutId, candidate.runId, candidate.wallet, candidate.amountNim);
     try {
