@@ -55,4 +55,18 @@ describe('wallet profile API', () => {
     expect(response.json().personal.wallet).toBe(ADDRESS);
     await app.close();
   });
+
+  it('keeps score and length from the same best run', async () => {
+    const app = buildApp();
+    const db = (await import('../src/db/client.js')).getDb();
+    db.prepare(`INSERT INTO runs (id, day, wallet, seed, sim_version, mode, inputs, log_hash, score, length, status, attested_at, attestation) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'verified', ?, ?)`)
+      .run('run-high-score', '2026-08-20', ADDRESS, 1, 1, 'solo', '[]', 'hash-high', 20, 3, Date.now(), '');
+    db.prepare(`INSERT INTO runs (id, day, wallet, seed, sim_version, mode, inputs, log_hash, score, length, status, attested_at, attestation) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'verified', ?, ?)`)
+      .run('run-longer', '2026-08-20', ADDRESS, 1, 1, 'solo', '[]', 'hash-long', 12, 9, Date.now(), '');
+    const response = await app.inject({ method: 'GET', url: `/api/v1/leaderboard/today?date=2026-08-20&wallet=${ADDRESS}` });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().entries[0]).toMatchObject({ score: 20, length: 3 });
+    expect(response.json().personal).toMatchObject({ rank: 1, score: 20, length: 3 });
+    await app.close();
+  });
 });

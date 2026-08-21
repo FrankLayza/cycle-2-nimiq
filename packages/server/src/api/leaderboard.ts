@@ -7,15 +7,22 @@ export function registerLeaderboard(app: FastifyInstance): void {
     const day = String((req.query as { date?: unknown } | undefined)?.date ?? todayUtc());
     const wallet = String((req.query as { wallet?: unknown } | undefined)?.wallet ?? '');
     const rows = getDb().prepare(
-      `SELECT wallet, MAX(score) AS score, MAX(length) AS length
+      `SELECT id, wallet, score, length
        FROM runs WHERE day = ? AND mode = 'solo' AND status = 'verified'
-       GROUP BY wallet ORDER BY score DESC, wallet ASC LIMIT 100`,
-    ).all(day) as Array<{ wallet: string; score: number; length: number }>;
-    const entries = rows.map((row, index) => ({ rank: index + 1, ...row }));
+       ORDER BY score DESC, length DESC, wallet ASC, id ASC`,
+    ).all(day) as Array<{ id: string; wallet: string; score: number; length: number }>;
+    const bestByWallet = new Map<string, { wallet: string; score: number; length: number }>();
+    for (const row of rows) {
+      if (!bestByWallet.has(row.wallet)) bestByWallet.set(row.wallet, { wallet: row.wallet, score: row.score, length: row.length });
+    }
+    const ranked = [...bestByWallet.values()];
+    const entries = ranked.slice(0, 100).map((row, index) => ({ rank: index + 1, ...row }));
+    const personalEntry = wallet ? ranked.find((entry) => entry.wallet === wallet) : undefined;
+    const personal = personalEntry ? { rank: ranked.indexOf(personalEntry) + 1, ...personalEntry } : null;
     return {
       date: day,
       entries,
-      personal: wallet ? entries.find((entry) => entry.wallet === wallet) ?? null : null,
+      personal,
     };
   });
 }
