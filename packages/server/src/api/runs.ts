@@ -8,6 +8,7 @@ import { dailySeed, todayUtc } from '../services/seed.js';
 import { REWARD_TIERS } from './rewards.js';
 import { attestationMessage, verifyNimiqAttestation } from '../services/attestation.js';
 import { normalizeNimiqAddress } from './wallets.js';
+import { isEligibleUtcDay } from '../services/dates.js';
 
 export function logHashOf(inputs: AppliedInput[][]): string {
   return createHash('sha256').update(JSON.stringify(inputs)).digest('hex');
@@ -41,6 +42,9 @@ export function registerRuns(app: FastifyInstance): void {
     const attestation = body.attestation as { message?: string; publicKey?: string; signature?: string } | undefined;
     const runId = String(body.id ?? '');
 
+    if (typeof day !== 'string' || !isEligibleUtcDay(day)) {
+      return reply.code(400).send({ error: 'day must be a valid non-future UTC date' });
+    }
     if (!inputs || !Number.isFinite(seed) || !Number.isFinite(reportedScore)) {
       return reply.code(400).send({ error: 'missing fields: inputs, seed, reportedScore' });
     }

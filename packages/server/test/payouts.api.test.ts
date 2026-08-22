@@ -44,4 +44,16 @@ describe('payout status API', () => {
     expect(response.statusCode).toBe(404);
     await app.close();
   });
+
+  it('rejects an invalid settlement day before signer setup', async () => {
+    const app = buildApp();
+    const response = await app.inject({
+      method: 'POST',
+      url: '/api/v1/admin/payouts/daily?day=2026-02-30',
+      headers: { 'x-admin-token': 'dev-admin-token' },
+    });
+    expect(response.statusCode).toBe(400);
+    expect(response.json().error).toMatch(/valid non-future UTC date/);
+    await app.close();
+  });
 });

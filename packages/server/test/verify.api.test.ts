@@ -91,6 +91,17 @@ describe('POST /api/v1/runs/verify', { timeout: 20000 }, () => {
     await app.close();
   });
 
+  it('rejects invalid and future calendar days before verification', async () => {
+    const app = buildApp();
+    const invalid = await app.inject({ method: 'POST', url: '/api/v1/runs/verify', payload: { ...validPayload(), day: '2026-02-30' } });
+    expect(invalid.statusCode).toBe(400);
+    expect(invalid.json().error).toMatch(/valid non-future UTC date/);
+    const future = await app.inject({ method: 'POST', url: '/api/v1/runs/verify', payload: { ...validPayload(), day: '2099-01-01' } });
+    expect(future.statusCode).toBe(400);
+    expect(future.json().error).toMatch(/valid non-future UTC date/);
+    await app.close();
+  });
+
   it('rejects a missing attestation (D34)', async () => {
     const app = buildApp();
     const payload = validPayload();

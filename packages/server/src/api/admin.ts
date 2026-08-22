@@ -3,6 +3,7 @@ import { loadConfig } from '../config.js';
 import { getDb } from '../db/client.js';
 import { NimiqPayoutBroadcaster } from '../services/nimiq-payouts.js';
 import { settleDaily } from '../services/payouts.js';
+import { isEligibleUtcDay } from '../services/dates.js';
 
 function addExplorerUrl<T extends { txHash?: string }>(payout: T): T & { explorerUrl: string | null } {
   const txHash = payout.txHash;
@@ -28,6 +29,9 @@ export function registerAdmin(app: FastifyInstance): void {
   app.post('/api/v1/admin/payouts/daily', async (req, reply) => {
     if (!adminTokenOk(req)) return reply.code(401).send({ error: 'unauthorized' });
     const day = String((req.query as { day?: unknown } | undefined)?.day ?? new Date().toISOString().slice(0, 10));
+    if (!isEligibleUtcDay(day)) {
+      return reply.code(400).send({ error: 'day must be a valid non-future UTC date', day, payouts: [] });
+    }
     if (!loadConfig().rewardSignerKey) {
       return reply.code(503).send({ error: 'reward signer is not configured', day, payouts: [] });
     }
