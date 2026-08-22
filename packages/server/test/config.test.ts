@@ -21,9 +21,9 @@ describe('server configuration', () => {
 
   it('rejects unsafe production defaults', () => {
     expect(() => loadConfig({ NODE_ENV: 'production' })).toThrow('ADMIN_TOKEN');
-    expect(() => loadConfig({ ...baseEnv, ADMIN_TOKEN: 'dev-admin-token' })).toThrow('ADMIN_TOKEN');
-    expect(() => loadConfig({ ...baseEnv, SEED_SALT: 'dev-seed-salt' })).toThrow('SEED_SALT');
-    expect(() => loadConfig({ ...baseEnv, APP_URL: undefined })).toThrow('APP_URL');
+    expect(() => loadConfig({ ...baseEnv, NODE_ENV: 'production', ADMIN_TOKEN: 'dev-admin-token' })).toThrow('ADMIN_TOKEN');
+    expect(() => loadConfig({ ...baseEnv, NODE_ENV: 'production', SEED_SALT: 'dev-seed-salt' })).toThrow('SEED_SALT');
+    expect(() => loadConfig({ ...baseEnv, NODE_ENV: 'production', APP_URL: undefined })).toThrow('APP_URL');
   });
 
   it('rejects malformed numeric and network settings', () => {
