@@ -30,7 +30,7 @@ jobs:
           RAILWAY_DEPLOY_HOOK: ${{ secrets.RAILWAY_DEPLOY_HOOK }}
         run: |
           if [ -n "$RAILWAY_DEPLOY_HOOK" ]; then
-            curl -fsS -X POST "$RAILWAY_DEPLOY_HOOK" || echo "Railway webhook failed (ignoring)"
+            curl -fsS -X POST "$RAILWAY_DEPLOY_HOOK"
           else
             echo "No RAILWAY_DEPLOY_HOOK secret — skipping server deploy"
           fi
