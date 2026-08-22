@@ -79,7 +79,12 @@ function reverify(row: VerifiedRunRow): boolean {
 
 /** Selects the best fully re-verified run per wallet, with deterministic tie-breaking. */
 export function dailyCandidates(day: string): PayoutCandidate[] {
-  return eligibleDailyPayouts(day).map(({ row: _row, ...candidate }) => candidate);
+  return eligibleDailyPayouts(day).map((candidate) => ({
+    runId: candidate.runId,
+    wallet: candidate.wallet,
+    amountNim: candidate.amountNim,
+    rank: candidate.rank,
+  }));
 }
 
 export async function settleDaily(day: string, broadcaster: PayoutBroadcaster): Promise<PayoutRecord[]> {
