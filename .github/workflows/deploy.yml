@@ -21,6 +21,7 @@ jobs:
       - run: pnpm lint
       - run: pnpm --filter @snake/sim test
       - run: pnpm --filter @snake/server test
+      - run: pnpm --filter @snake/client test
       - run: pnpm --filter @snake/client build
 
       # Server: Railway deploy webhook (create a Deploy Hook in Railway and
