@@ -54,7 +54,7 @@ function eligibleDailyPayouts(day: string): EligiblePayout[] {
     `SELECT id, day, wallet, seed, sim_version, inputs, score, length, attestation
      FROM runs
      WHERE day = ? AND mode = 'solo' AND status = 'verified'
-     ORDER BY score DESC, wallet ASC, id ASC`,
+     ORDER BY score DESC, length DESC, wallet ASC, id ASC`,
   ).all(day) as VerifiedRunRow[];
   const best = new Map<string, VerifiedRunRow>();
   for (const row of rows) {

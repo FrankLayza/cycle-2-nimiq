@@ -137,9 +137,15 @@ function rankFor(day: string, wallet: string): number | null {
   const db = getDb();
   const rows = db
     .prepare(
-      `SELECT wallet, MAX(score) AS best FROM runs
-       WHERE day = ? AND status = 'verified'
-       GROUP BY wallet ORDER BY best DESC`,
+      `SELECT wallet, score AS best, length AS best_length
+       FROM (
+         SELECT wallet, score, length,
+           ROW_NUMBER() OVER (PARTITION BY wallet ORDER BY score DESC, length DESC, id ASC) AS row_num
+         FROM runs
+         WHERE day = ? AND status = 'verified'
+       )
+       WHERE row_num = 1
+       ORDER BY best DESC, best_length DESC, wallet ASC`,
     )
     .all(day) as { wallet: string; best: number }[];
   const index = rows.findIndex((r) => r.wallet === wallet);

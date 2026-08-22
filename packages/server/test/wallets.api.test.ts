@@ -52,9 +52,35 @@ describe('wallet profile API', () => {
       .run('run-1', '2026-08-19', ADDRESS, 1, 1, 'solo', '[]', 'hash-1', 12, 3, Date.now(), '');
     const response = await app.inject({ method: 'GET', url: `/api/v1/leaderboard/today?date=2026-08-19&wallet=${ADDRESS}` });
     expect(response.statusCode).toBe(200);
-    expect(response.json().entries[0]).toMatchObject({ rank: 1, wallet: ADDRESS, score: 12, maskedWallet: `${ADDRESS.replace(/\s+/g, '').slice(0, 4)}...${ADDRESS.replace(/\s+/g, '').slice(-4)}` });
+    expect(response.json().entries[0]).toEqual({ rank: 1, score: 12, length: 3, maskedWallet: `${ADDRESS.replace(/\s+/g, '').slice(0, 4)}...${ADDRESS.replace(/\s+/g, '').slice(-4)}`, verified: true, isYou: true });
+    expect(response.json().entries[0]).not.toHaveProperty('wallet');
     expect(response.json().personal.wallet).toBe(ADDRESS);
     expect(response.json().totalRuns).toBe(1);
+    expect(response.json()).toMatchObject({ page: 1, pageSize: 100 });
+    await app.close();
+  });
+
+  it('supports the documented daily leaderboard route and validates pagination', async () => {
+    const app = buildApp();
+    const daily = await app.inject({ method: 'GET', url: '/api/v1/leaderboard/daily?date=2026-08-19&page=1' });
+    expect(daily.statusCode).toBe(200);
+    const invalidPage = await app.inject({ method: 'GET', url: '/api/v1/leaderboard/daily?page=0' });
+    expect(invalidPage.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it('keeps equal-score rank ordering deterministic', async () => {
+    const app = buildApp();
+    const db = (await import('../src/db/client.js')).getDb();
+    const other = KeyPair.derive(new PrivateKey(new Uint8Array(32).fill(13))).toAddress().toUserFriendlyAddress();
+    for (const [id, wallet, length] of [['tie-a', ADDRESS, 3], ['tie-b', other, 2] as const]) {
+      db.prepare(`INSERT INTO runs (id, day, wallet, seed, sim_version, mode, inputs, log_hash, score, length, status, attested_at, attestation) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'verified', ?, ?)`)
+        .run(id, '2026-08-21', wallet, 1, 1, 'solo', '[]', id, 12, length, Date.now(), '');
+    }
+    const response = await app.inject({ method: 'GET', url: '/api/v1/leaderboard/daily?date=2026-08-21' });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().entries.map((entry: { wallet?: string; rank: number }) => entry.rank)).toEqual([1, 2]);
+    expect(response.json().entries[0]).toMatchObject({ score: 12, length: 3 });
     await app.close();
   });
 
