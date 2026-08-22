@@ -52,8 +52,9 @@ describe('wallet profile API', () => {
       .run('run-1', '2026-08-19', ADDRESS, 1, 1, 'solo', '[]', 'hash-1', 12, 3, Date.now(), '');
     const response = await app.inject({ method: 'GET', url: `/api/v1/leaderboard/today?date=2026-08-19&wallet=${ADDRESS}` });
     expect(response.statusCode).toBe(200);
-    expect(response.json().entries[0]).toMatchObject({ rank: 1, wallet: ADDRESS, score: 12 });
+    expect(response.json().entries[0]).toMatchObject({ rank: 1, wallet: ADDRESS, score: 12, maskedWallet: `${ADDRESS.replace(/\s+/g, '').slice(0, 4)}...${ADDRESS.replace(/\s+/g, '').slice(-4)}` });
     expect(response.json().personal.wallet).toBe(ADDRESS);
+    expect(response.json().totalRuns).toBe(1);
     await app.close();
   });
 

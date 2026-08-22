@@ -1,4 +1,5 @@
 import type { FastifyInstance } from 'fastify';
+import { loadConfig } from '../config.js';
 
 /** Published reward schedule (D17). Amounts are placeholders — pool is small and ours. */
 export const REWARD_TIERS = [
@@ -14,6 +15,7 @@ export function registerRewards(app: FastifyInstance): void {
     daily: REWARD_TIERS,
     weekly: [{ rank: 1, nim: 150 }],
     streakBonus: STREAK_BONUS,
+    poolSizeNim: loadConfig().rewardPoolNim,
     poolSource: 'team-seeded pool — the house never holds player funds (D2/D4). Payouts only ever go out.',
     rulesText:
       'Skill-based rewards with clearly defined rules and prizes. Outcomes are determined by skill ' +

@@ -23,7 +23,10 @@ export function registerAdmin(app: FastifyInstance): void {
     const db = getDb();
     const runs = (db.prepare('SELECT COUNT(*) AS c FROM runs').get() as { c: number }).c;
     const wallets = (db.prepare('SELECT COUNT(DISTINCT wallet) AS c FROM runs').get() as { c: number }).c;
-    return { runs, wallets };
+    const verified = (db.prepare("SELECT COUNT(*) AS c FROM runs WHERE status = 'verified'").get() as { c: number }).c;
+    const invalid = (db.prepare("SELECT COUNT(*) AS c FROM runs WHERE status = 'invalid'").get() as { c: number }).c;
+    const checked = verified + invalid;
+    return { runs, wallets, verifiedRuns: verified, invalidRuns: invalid, verificationAgreement: checked ? verified / checked : null };
   });
 
   app.post('/api/v1/admin/payouts/daily', async (req, reply) => {

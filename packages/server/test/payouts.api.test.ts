@@ -56,4 +56,12 @@ describe('payout status API', () => {
     expect(response.json().error).toMatch(/valid non-future UTC date/);
     await app.close();
   });
+
+  it('returns verification agreement metrics for admins', async () => {
+    const app = buildApp();
+    const response = await app.inject({ method: 'GET', url: '/api/v1/admin/stats', headers: { 'x-admin-token': 'dev-admin-token' } });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({ runs: 0, wallets: 0, verifiedRuns: 0, invalidRuns: 0, verificationAgreement: null });
+    await app.close();
+  });
 });

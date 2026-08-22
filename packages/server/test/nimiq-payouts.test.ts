@@ -13,6 +13,7 @@ function config(overrides: Partial<Config> = {}): Config {
     appUrl: 'http://localhost',
     rewardSignerKey: '01'.repeat(32),
     rewardFeeNim: 0,
+    rewardPoolNim: 0,
     ...overrides,
   };
 }

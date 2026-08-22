@@ -8,6 +8,7 @@ export interface Config {
   appUrl: string;
   rewardSignerKey: string;
   rewardFeeNim: number;
+  rewardPoolNim: number;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -24,5 +25,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     appUrl: env.APP_URL ?? 'http://localhost:5173',
     rewardSignerKey: env.REWARD_SIGNER_KEY ?? '',
     rewardFeeNim: Number(env.REWARD_FEE_NIM ?? 0),
+    rewardPoolNim: Number(env.REWARD_POOL_NIM ?? 0),
   };
 }
