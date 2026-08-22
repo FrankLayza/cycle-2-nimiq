@@ -7,7 +7,7 @@ import { replay, SIM_VERSION } from '@snake/sim';
 import type { AppliedInput } from '@snake/sim';
 import { closeDb, getDb } from '../src/db/client.js';
 import { attestationMessage } from '../src/services/attestation.js';
-import { dailyCandidates, settleDaily } from '../src/services/payouts.js';
+import { dailyCandidates, PayoutSubmissionUnknownError, settleDaily } from '../src/services/payouts.js';
 
 const DAY = '2026-08-21';
 let tempDir: string;
@@ -91,5 +91,30 @@ describe('daily payouts', () => {
     });
     expect(payouts[0]).toMatchObject({ status: 'failed', error: 'network unavailable' });
     expect(getDb().prepare('SELECT status, tx_hash FROM payouts').get()).toEqual({ status: 'failed', tx_hash: null });
+  });
+
+  it('does not retry a transfer whose network result is unknown', async () => {
+    insertVerifiedRun('unknown', 6, [[]]);
+    let calls = 0;
+    const broadcaster = {
+      async send() {
+        calls += 1;
+        throw new PayoutSubmissionUnknownError('submission timed out', 'tx-unknown');
+      },
+    };
+    expect((await settleDaily(DAY, broadcaster))[0]).toMatchObject({ status: 'unknown', txHash: 'tx-unknown' });
+    expect((await settleDaily(DAY, broadcaster))[0]).toMatchObject({ status: 'unknown', txHash: 'tx-unknown' });
+    expect(calls).toBe(1);
+  });
+
+  it('does not retry a pending payout after an interrupted attempt', async () => {
+    const wallet = insertVerifiedRun('interrupted', 7, [[]]);
+    getDb().prepare(
+      "INSERT INTO payouts (id, run_id, wallet, amount_nim, status, attempted_at) VALUES (?, ?, ?, ?, 'pending', ?)",
+    ).run('daily:interrupted', 'interrupted', wallet, 30, Date.now());
+    let calls = 0;
+    const payouts = await settleDaily(DAY, { async send() { calls += 1; return { txHash: 'duplicate' }; } });
+    expect(payouts[0]).toMatchObject({ status: 'unknown' });
+    expect(calls).toBe(0);
   });
 });

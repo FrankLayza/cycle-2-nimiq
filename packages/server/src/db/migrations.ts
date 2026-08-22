@@ -75,4 +75,8 @@ export function migrate(db: Database): void {
   if (!runColumns.some((column) => column.name === 'attestation')) {
     db.exec("ALTER TABLE runs ADD COLUMN attestation TEXT NOT NULL DEFAULT ''");
   }
+  const payoutColumns = db.prepare('PRAGMA table_info(payouts)').all() as Array<{ name: string }>;
+  if (!payoutColumns.some((column) => column.name === 'attempted_at')) {
+    db.exec('ALTER TABLE payouts ADD COLUMN attempted_at INTEGER');
+  }
 }

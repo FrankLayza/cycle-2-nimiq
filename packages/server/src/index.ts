@@ -5,6 +5,7 @@ import { buildApp } from './app.js';
 import { loadConfig } from './config.js';
 import { getDb } from './db/client.js';
 import { MatchRoom } from './rooms/MatchRoom.js';
+import { startPayoutScheduler } from './services/payout-scheduler.js';
 
 export interface RunningServer {
   app: ReturnType<typeof buildApp>;
@@ -29,6 +30,9 @@ export async function startServer(portOverride?: number): Promise<RunningServer>
   gameServer.define('match', MatchRoom).filterBy(['mode', 'code']);
 
   getDb(); // open + migrate on boot
+
+  const stopPayoutScheduler = process.env.PAYOUT_SCHEDULER === 'true' ? startPayoutScheduler() : undefined;
+  app.addHook('onClose', async () => stopPayoutScheduler?.());
 
   await app.listen({ port, host: '0.0.0.0' });
 

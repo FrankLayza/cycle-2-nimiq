@@ -6,6 +6,8 @@ export interface Config {
   nimNetwork: 'testnet' | 'mainnet';
   seedSalt: string;
   appUrl: string;
+  rewardSignerKey: string;
+  rewardFeeNim: number;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
@@ -20,5 +22,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     nimNetwork: env.NIM_NETWORK === 'mainnet' ? 'mainnet' : 'testnet',
     seedSalt: env.SEED_SALT ?? 'dev-seed-salt',
     appUrl: env.APP_URL ?? 'http://localhost:5173',
+    rewardSignerKey: env.REWARD_SIGNER_KEY ?? '',
+    rewardFeeNim: Number(env.REWARD_FEE_NIM ?? 0),
   };
 }

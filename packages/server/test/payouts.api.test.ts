@@ -32,6 +32,8 @@ describe('payout status API', () => {
       status: 'sent',
       txHash: 'tx-test',
       paidAt: 123,
+      attemptedAt: null,
+      explorerUrl: 'https://test-nimiq.watch/#/tx/tx-test',
     });
     await app.close();
   });
