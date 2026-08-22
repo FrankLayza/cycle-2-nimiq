@@ -70,4 +70,25 @@ describe('wallet profile API', () => {
     expect(response.json().personal).toMatchObject({ rank: 1, score: 20, length: 3 });
     await app.close();
   });
+
+  it('returns streak state and the seven-day badge', async () => {
+    const app = buildApp();
+    const db = (await import('../src/db/client.js')).getDb();
+    db.prepare('INSERT INTO wallets (address, created_at, streak, last_play_date, last_run_at) VALUES (?, ?, ?, ?, ?) ON CONFLICT(address) DO UPDATE SET streak = excluded.streak, last_play_date = excluded.last_play_date, last_run_at = excluded.last_run_at')
+      .run(ADDRESS, Date.now(), 7, '2026-08-22', Date.now());
+    db.prepare(`INSERT INTO runs (id, day, wallet, seed, sim_version, mode, inputs, log_hash, score, length, status, attested_at, attestation) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'verified', ?, ?)`)
+      .run('streak-best', '2026-08-22', ADDRESS, 1, 1, 'solo', '[]', 'streak-best', 42, 4, Date.now(), '');
+    const response = await app.inject({ method: 'GET', url: `/api/v1/streaks/${ADDRESS.toLowerCase()}` });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ streak: 7, bestScore: 42, lastPlayDate: '2026-08-22', badge: '7-day-streak' });
+    await app.close();
+  });
+
+  it('returns 404 for an unregistered streak wallet', async () => {
+    const app = buildApp();
+    const other = KeyPair.derive(new PrivateKey(new Uint8Array(32).fill(12))).toAddress().toUserFriendlyAddress();
+    const response = await app.inject({ method: 'GET', url: `/api/v1/streaks/${other}` });
+    expect(response.statusCode).toBe(404);
+    await app.close();
+  });
 });
