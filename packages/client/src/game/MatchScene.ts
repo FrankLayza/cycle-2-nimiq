@@ -105,12 +105,17 @@ export class MatchScene extends Phaser.Scene {
     }
 
     for (const snake of state.snakes) {
-      if (!snake.alive || !snake.cells[0]) continue;
+      // Keep the final authoritative position visible after elimination. The
+      // result overlay can arrive on the same tick as the collision, and
+      // removing the dead snake here makes a valid loss look unexplained.
+      if (!snake.cells[0]) continue;
       const base = Phaser.Display.Color.HexStringToColor(snake.color || (snake.id === 0 ? '#ff6b6b' : '#3ddc84')).color;
       const outline = snake.id === 0 ? 0xb93e4b : 0x18885d;
+      g.setAlpha(snake.alive ? 1 : 0.38);
       if (snake.boosting) this.drawBoostTrail(g, snake.cells, base);
       for (let index = snake.cells.length - 1; index >= 1; index--) this.drawSegment(g, snake.cells[index], base, outline, index);
       this.drawHead(g, snake.cells[0], snake.cells[1], base, outline, snake.id);
+      g.setAlpha(1);
     }
     this.drawParticles(g, time);
     if (time < this.boundaryFlashUntil) {

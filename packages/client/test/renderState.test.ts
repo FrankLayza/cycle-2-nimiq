@@ -35,4 +35,19 @@ describe('PvP render snapshots', () => {
     expect(snapshot.snakes[0].sessionId).toBe('remote');
     expect(snapshot.snakes[0].cells).toEqual([{ x: 4, y: 5 }]);
   });
+
+  it('preserves eliminated snakes and their final cells for the result frame', () => {
+    const state = new ClientMatchState();
+    const snake = new ClientSnake();
+    snake.seat = 0;
+    snake.alive = false;
+    snake.length = 2;
+    snake.cells.push(Object.assign(new ClientCell(), { x: 8, y: 9 }));
+    snake.cells.push(Object.assign(new ClientCell(), { x: 7, y: 9 }));
+    state.snakes.set('0', snake);
+
+    const snapshot = snapshotFromRoom(state);
+    expect(snapshot.snakes[0]).toMatchObject({ alive: false, length: 2 });
+    expect(snapshot.snakes[0].cells).toEqual([{ x: 8, y: 9 }, { x: 7, y: 9 }]);
+  });
 });
