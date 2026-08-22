@@ -11,6 +11,7 @@ const baseEnv = {
   REWARD_POOL_NIM: '100',
   NIM_NETWORK: 'testnet',
   APP_URL: 'https://snake.example',
+  REWARD_SIGNER_KEY: '01'.repeat(32),
 };
 
 describe('server configuration', () => {
@@ -24,6 +25,8 @@ describe('server configuration', () => {
     expect(() => loadConfig({ ...baseEnv, NODE_ENV: 'production', ADMIN_TOKEN: 'dev-admin-token' })).toThrow('ADMIN_TOKEN');
     expect(() => loadConfig({ ...baseEnv, NODE_ENV: 'production', SEED_SALT: 'dev-seed-salt' })).toThrow('SEED_SALT');
     expect(() => loadConfig({ ...baseEnv, NODE_ENV: 'production', APP_URL: undefined })).toThrow('APP_URL');
+    expect(() => loadConfig({ ...baseEnv, NODE_ENV: 'production', REWARD_SIGNER_KEY: '' })).toThrow('REWARD_SIGNER_KEY');
+    expect(() => loadConfig({ ...baseEnv, NODE_ENV: 'production', ALLOWED_ORIGINS: '*' })).toThrow('wildcard');
   });
 
   it('rejects malformed numeric and network settings', () => {

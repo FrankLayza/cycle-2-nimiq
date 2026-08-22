@@ -43,7 +43,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     if (config.adminToken === 'dev-admin-token') throw new Error('ADMIN_TOKEN must be configured in production');
     if (config.seedSalt === 'dev-seed-salt') throw new Error('SEED_SALT must be configured in production');
     if (!env.ALLOWED_ORIGINS || config.allowedOrigins.length === 0) throw new Error('ALLOWED_ORIGINS must be configured in production');
+    if (config.allowedOrigins.includes('*')) throw new Error('ALLOWED_ORIGINS cannot use wildcard in production');
     if (!env.APP_URL) throw new Error('APP_URL must be configured in production');
+    if (!config.rewardSignerKey) throw new Error('REWARD_SIGNER_KEY must be configured in production');
   }
   return config;
 }
