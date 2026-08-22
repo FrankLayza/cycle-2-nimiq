@@ -36,14 +36,14 @@ packages/
 
 Dependency direction (enforced): `server → sim` · `client → sim`. Client and server never import each other.
 
-## Current state (2026-08-19)
+## Current state (2026-08-22)
 
 - **W1 scaffold DONE + committed.** Sim ported with golden hashes locked; Colyseus room with tick loop;
   React/Phaser client with rotated viewport + local bot play; 23 tests green incl. a 2-client PvP e2e.
-- **W2 active.** The official `@nimiq/mini-app-sdk` is installed; silent `init()` + `listAccounts()`
-  identity and lobby display are implemented. Room-code join, schema mirror, deep-link input, and live
-  input sending are partially wired. Authoritative rendering/interpolation, room creation/lifecycle,
-  Today's Run signing, real-device validation, and Lawn League art remain.
+- **W2 active.** The official `@nimiq/mini-app-sdk` is installed; silent `init()` + explicit
+  `listAccounts()` identity, room creation/join, StrictMode-safe PvP, authoritative rendering,
+  Today's Run signing, shared touch/keyboard controls, and payout status lookup are implemented.
+  Real-device validation and production payout broadcasting remain.
 - **PvP flow:** lobby can create a room through `POST /api/v1/rooms` and join by the generated 4-character
   code. Current capacity is explicitly 2 because the deterministic sim is still 1v1. Phaser keeps dead
   snakes rendered at reduced opacity in the final state, preventing the empty-board result screen. A
@@ -73,7 +73,22 @@ Dependency direction (enforced): `server → sim` · `client → sim`. Client an
   {message, publicKey, signature}}`; the message must equal `snake-rink:today:{id}:{day}:{seed}:{score}`.
   Server verification now uses `@nimiq/core`; the public key must derive the submitted wallet address
   and the signature must verify the canonical message. Verified runs create/update wallet streak profiles.
-- Today's Run attestation gate in `/runs/verify` is stubbed pending the tx-signing spike.
+- Today's Run attestation verification is cryptographically implemented with `@nimiq/core`.
+  Reward transaction signing/broadcasting remains intentionally unavailable until the server-side
+  seeded signer and testnet transaction flow are configured.
+
+## Remaining implementation
+
+1. Real Nimiq testnet reward broadcaster, signer-key parsing, transaction validity/fees, and
+   crash-safe broadcast idempotency.
+2. Weekly leaderboard and weekly settlement, if retained in MVP scope.
+3. Nimiq Pay WebView validation: wallet connect/sign approval, rotation, safe areas, touch, share,
+   and two-device PvP.
+4. Live leaderboard/streak refresh and wallet identity in the match HUD.
+5. Install Node 24/pnpm 10 in every development/CI environment, then run typecheck, lint, tests,
+   and client build; add test isolation if parallel Vitest execution exposes DB singleton races.
+6. Human release work: Railway/Pages credentials, public repo/registration/Skool, seeded testnet
+   reward wallet, README/demo, and final submission QA.
 - Room codes: 4-char Crockford base32 (no I/L/O/U).
 
 ## Commands
