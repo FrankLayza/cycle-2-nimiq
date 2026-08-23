@@ -54,11 +54,21 @@ export class MatchScene extends Phaser.Scene {
     this.decoratedSeed = seed;
     const g = this.field;
     g.clear();
+    const radius = Math.max(16, this.fieldSize * 0.025);
+    const rim = Math.max(8, this.fieldSize * 0.014);
+    g.fillStyle(0x16351e, 0.28);
+    g.fillRoundedRect(this.offX + 8, this.offY + 12, this.fieldSize, this.fieldSize, radius + 4);
+    g.fillStyle(0x315f24, 1);
+    g.fillRoundedRect(this.offX, this.offY, this.fieldSize, this.fieldSize, radius);
     g.fillStyle(0x75bd59, 1);
-    g.fillRoundedRect(this.offX, this.offY, this.fieldSize, this.fieldSize, 18);
+    g.fillRoundedRect(this.offX + rim, this.offY + rim, this.fieldSize - rim * 2, this.fieldSize - rim * 2, radius - rim / 2);
     for (let x = 0; x < GRID_SIZE; x++) {
-      g.fillStyle(x % 2 === 0 ? 0xffffff : 0x315f24, x % 2 === 0 ? 0.035 : 0.025);
-      g.fillRect(this.offX + x * this.cellPx, this.offY, this.cellPx, this.fieldSize);
+      g.fillStyle(x % 2 === 0 ? 0xffffff : 0x315f24, x % 2 === 0 ? 0.045 : 0.035);
+      g.fillRect(this.offX + rim + x * this.cellPx, this.offY + rim, this.cellPx, this.fieldSize - rim * 2);
+    }
+    for (let y = 0; y < GRID_SIZE; y += 3) {
+      g.fillStyle(0x2f7f3f, 0.045);
+      g.fillRect(this.offX + rim, this.offY + rim + y * this.cellPx, this.fieldSize - rim * 2, this.cellPx * 0.42);
     }
 
     let value = seed || 1;
@@ -77,8 +87,10 @@ export class MatchScene extends Phaser.Scene {
       g.fillCircle(x, y, 1.8);
     }
 
-    g.lineStyle(3, 0x274c22, 0.18);
-    g.strokeRoundedRect(this.offX, this.offY, this.fieldSize, this.fieldSize, 18);
+    g.lineStyle(2, 0xffffff, 0.16);
+    g.strokeRoundedRect(this.offX + rim, this.offY + rim, this.fieldSize - rim * 2, this.fieldSize - rim * 2, radius - rim / 2);
+    g.lineStyle(3, 0x183d22, 0.42);
+    g.strokeRoundedRect(this.offX, this.offY, this.fieldSize, this.fieldSize, radius);
   }
 
   private renderSnapshot(state: RenderSnapshot, time: number) {
@@ -100,6 +112,8 @@ export class MatchScene extends Phaser.Scene {
     for (const pellet of state.pellets) {
       const x = this.offX + (pellet.x + 0.5) * this.cellPx;
       const y = this.offY + (pellet.y + 0.5) * this.cellPx + Math.sin(time / 250 + pellet.x) * 1.5;
+      g.fillStyle(0x183d22, 0.22);
+      g.fillEllipse(x + 1, y + this.cellPx * 0.24, this.cellPx * 0.42, this.cellPx * 0.16);
       if (pellet.type === 1) this.drawStar(g, x, y, this.cellPx * 0.42);
       else this.drawApple(g, x, y);
     }
@@ -112,6 +126,11 @@ export class MatchScene extends Phaser.Scene {
       const base = Phaser.Display.Color.HexStringToColor(snake.color || (snake.id === 0 ? '#ff6b6b' : '#3ddc84')).color;
       const outline = snake.id === 0 ? 0xb93e4b : 0x18885d;
       g.setAlpha(snake.alive ? 1 : 0.38);
+      for (const cell of snake.cells) {
+        const shadow = this.center(cell);
+        g.fillStyle(0x183d22, snake.alive ? 0.18 : 0.08);
+        g.fillEllipse(shadow.x + 1.5, shadow.y + this.cellPx * 0.28, this.cellPx * 0.68, this.cellPx * 0.2);
+      }
       if (snake.boosting) this.drawBoostTrail(g, snake.cells, base);
       for (let index = snake.cells.length - 1; index >= 1; index--) this.drawSegment(g, snake.cells[index], base, outline, index);
       this.drawHead(g, snake.cells[0], snake.cells[1], base, outline, snake.id);
@@ -140,7 +159,10 @@ export class MatchScene extends Phaser.Scene {
     const y = this.offY + state.bounds.y0 * this.cellPx;
     const width = (state.bounds.x1 - state.bounds.x0 + 1) * this.cellPx;
     const height = (state.bounds.y1 - state.bounds.y0 + 1) * this.cellPx;
-    g.lineStyle(4, 0xffffff, 0.88);
+    const urgency = Math.max(0, 1 - (state.bounds.x1 - state.bounds.x0 + 1) / GRID_SIZE);
+    g.lineStyle(8, urgency > 0.45 ? 0xf7e04d : 0x183d22, 0.18 + urgency * 0.12);
+    g.strokeRect(x, y, width, height);
+    g.lineStyle(4, urgency > 0.45 ? 0xfff4a8 : 0xffffff, 0.78 + urgency * 0.12);
     const dash = 18; const gap = 11;
     for (let dx = 0; dx < width; dx += dash + gap) { g.lineBetween(x + dx, y, Math.min(x + dx + dash, x + width), y); g.lineBetween(x + dx, y + height, Math.min(x + dx + dash, x + width), y + height); }
     for (let dy = 0; dy < height; dy += dash + gap) { g.lineBetween(x, y + dy, x, Math.min(y + dy + dash, y + height)); g.lineBetween(x + width, y + dy, x + width, Math.min(y + dy + dash, y + height)); }
@@ -153,7 +175,8 @@ export class MatchScene extends Phaser.Scene {
     const size = this.cellPx * 0.84;
     g.fillStyle(outline, 1); g.fillRoundedRect(x - size / 2 - 1.5, y - size / 2 - 1.5, size + 3, size + 3, 8);
     g.fillStyle(base, 1); g.fillRoundedRect(x - size / 2, y - size / 2, size, size, 7);
-    g.fillStyle(0xffffff, 0.2); g.fillRoundedRect(x - size * 0.28, y - size * 0.3, size * 0.46, size * 0.18, 4);
+    g.fillStyle(0xffffff, 0.22); g.fillRoundedRect(x - size * 0.28, y - size * 0.3, size * 0.46, size * 0.18, 4);
+    g.fillStyle(0x183d22, 0.13); g.fillRoundedRect(x - size * 0.24, y + size * 0.22, size * 0.42, size * 0.12, 3);
     if (index % 3 === 0) { g.fillStyle(outline, 0.4); g.fillCircle(x + size * 0.2, y + size * 0.2, 2.2); }
   }
 
@@ -161,6 +184,7 @@ export class MatchScene extends Phaser.Scene {
     const { x, y } = this.center(head);
     const size = this.cellPx * 1.08;
     const dx = neck ? head.x - neck.x : 1; const dy = neck ? head.y - neck.y : 0;
+    g.fillStyle(0x183d22, 0.18); g.fillEllipse(x + 2, y + size * 0.42, size * 0.72, size * 0.2);
     g.fillStyle(outline, 1); g.fillCircle(x, y, size * 0.53);
     g.fillStyle(base, 1); g.fillCircle(x, y, size * 0.47);
     g.fillStyle(0xffffff, 0.24); g.fillEllipse(x - size * 0.12, y - size * 0.18, size * 0.42, size * 0.2);

@@ -328,7 +328,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
 
         {phaseMessage && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-ink/25 backdrop-blur-xs">
-            <div className="status-panel w-[min(88%,20rem)] rounded-2xl bg-cream px-6 py-5 text-center text-ink shadow-sm">
+            <div className="status-panel w-[min(88%,20rem)] rounded-2xl bg-cream px-6 py-5 text-center text-ink shadow-xs">
               <div className="loading-snake mx-auto mb-4 h-6 w-16 rounded-full bg-teal" />
               {phaseMessage}
             </div>
@@ -344,7 +344,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
           </div>
         )}
 
-        <div className="match-controls absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3">
+        <div className="mobile-control-dock match-controls absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3">
           {!hasTurned && (
             <div className="match-hint pointer-events-none absolute bottom-[94px] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-xl border border-white/75 bg-white/88 px-3.5 py-2 text-[12px] font-bold text-ink shadow-xs backdrop-blur-xs">
               {hud.boosting ? 'Boosting · tail burns' : 'Swipe, tap the pad, or use arrow keys'}

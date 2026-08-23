@@ -40,7 +40,7 @@
     background-color: var(--color-cream);
     color: var(--color-ink);
     font-family: var(--font-sans);
-    touch-action: none;
+    touch-action: manipulation;
     user-select: none;
     -webkit-user-select: none;
   }
@@ -51,6 +51,56 @@
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.match-shell,
+.daily-match-shell {
+  isolation: isolate;
+  touch-action: none;
+}
+
+.match-shell::after,
+.daily-match-shell::after {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  content: '';
+  background: radial-gradient(ellipse at center, transparent 48%, rgb(11 14 20 / 18%) 100%);
+  mix-blend-mode: multiply;
+}
+
+.match-shell > .match-hud,
+.match-shell > .match-controls {
+  z-index: 2;
+}
+
+.match-shell > div:first-child {
+  position: relative;
+  z-index: 0;
+}
+
+.daily-match-shell > div {
+  position: relative;
+  z-index: 2;
+}
+
+.game-pad {
+  box-shadow: 0 10px 24px rgb(11 14 20 / 18%);
+}
+
+.boost-button {
+  letter-spacing: 0.04em;
+}
+
+.daily-match-shell {
+  background:
+    radial-gradient(circle at 50% 0%, rgb(53 201 130 / 18%), transparent 38%),
+    var(--color-ink);
+}
+
+.daily-match-shell .daily-field {
+  box-shadow: 0 20px 42px rgb(3 14 9 / 34%), inset 0 0 0 1px rgb(255 255 255 / 12%);
 }
 
 @media (orientation: portrait) {
@@ -112,6 +162,20 @@ button:disabled { cursor: not-allowed; }
 .pickup-mark { width: 18px; height: 18px; border-radius: 50%; background: var(--color-lemon); box-shadow: 0 3px 0 #d6be28; }
 
 .lobby-character { position: relative; overflow: hidden; }
+.lobby-visual { background: linear-gradient(145deg, #e8f4df 0%, #cde9b9 100%); }
+.lobby-sun { position: absolute; right: 12%; top: 10%; width: 84px; height: 84px; border-radius: 999px; background: #f7e04d; opacity: .72; box-shadow: 0 0 0 18px rgb(247 224 77 / 12%); }
+.lobby-field-lines { position: absolute; inset: 18% 8% 14%; border: 2px solid rgb(63 122 51 / 18%); border-radius: 48% 52% 46% 54%; transform: rotate(-7deg); }
+.lobby-field-lines::after { position: absolute; inset: 14% 9%; border: 2px dashed rgb(63 122 51 / 15%); border-radius: 52% 48% 54% 46%; content: ''; }
+.lobby-character-large { transform: scale(1.25); transform-origin: center; }
+.lobby-character-large { min-height: 100%; }
+.lobby-character-large .character-snake { transform: scale(1.16); }
+.lobby-character-large .character-snake-coral { left: 12%; bottom: 18%; }
+.lobby-character-large .character-snake-teal { right: 12%; top: 22%; }
+.lobby-character-large .pickup-mark { left: 51%; top: 42%; width: 26px; height: 26px; box-shadow: 0 4px 0 #d6be28; }
+.lobby-visual-caption { position: absolute; bottom: 1rem; left: 1.25rem; right: 1.25rem; display: flex; align-items: center; justify-content: center; gap: .65rem; color: var(--color-grass-deep); font-size: .72rem; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
+.lobby-visual-caption .snake-mark { width: 34px; height: 12px; }
+.lobby-mode-icon { display: grid; width: 2.35rem; height: 2.35rem; flex: none; place-items: center; border-radius: .8rem; color: var(--color-ink); font-size: 1.3rem; font-weight: 900; }
+.lobby-proof { background: linear-gradient(135deg, var(--color-ink), #263b53); }
 .lobby-character .pickup-mark { position: absolute; left: 50%; top: 45%; }
 .character-snake { position: absolute; display: flex; align-items: center; animation: character-breathe 2.4s var(--ease-in-out) infinite; }
 .character-snake i, .character-snake b { display: block; width: 28px; height: 28px; margin-left: -5px; border-radius: 50%; box-shadow: inset 0 5px 0 rgb(255 255 255 / 24%); }
@@ -123,6 +187,49 @@ button:disabled { cursor: not-allowed; }
 .character-snake-coral i, .character-snake-coral b { background: var(--color-coral); }
 .character-snake-teal { right: 15px; top: 18px; flex-direction: row-reverse; animation-delay: -1.2s; }
 .character-snake-teal i, .character-snake-teal b { background: var(--color-teal); }
+
+.mobile-control-dock {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .65rem;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 1.5rem;
+  background: rgb(23 34 53 / 55%);
+  box-shadow: 0 12px 28px rgb(11 14 20 / 20%);
+  backdrop-filter: blur(10px);
+}
+
+.mobile-control-dock::before {
+  position: absolute;
+  top: -.65rem;
+  left: 50%;
+  padding: .25rem .6rem;
+  border: 1px solid rgb(255 255 255 / 15%);
+  border-radius: 999px;
+  background: rgb(23 34 53 / 78%);
+  color: rgb(255 255 255 / 75%);
+  content: 'SWIPE TO TURN';
+  font-size: .58rem;
+  font-weight: 900;
+  letter-spacing: .12em;
+  transform: translateX(-50%);
+}
+
+@media (min-width: 768px) {
+  .mobile-control-dock {
+    padding: 0;
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
+  .mobile-control-dock::before { display: none; }
+  .match-controls .game-pad { scale: .86; transform-origin: bottom left; }
+  .match-controls .boost-button { scale: .86; transform-origin: bottom right; }
+}
 
 @keyframes character-breathe {
   0%, 100% { translate: 0 0; scale: 1; }
@@ -186,14 +293,24 @@ button:disabled { cursor: not-allowed; }
 }
 
 @media (max-height: 680px) {
-  .lobby-hero { margin-top: 1rem; padding: 1rem; }
-  .lobby-hero > div:first-child { height: 5rem; margin-bottom: 0.75rem; }
+  .lobby-stage { margin-top: 1.25rem; gap: 1rem; }
+  .lobby-visual { height: 11rem; }
+  .lobby-modes { margin-top: 1.25rem; }
 }
 
 @media (max-width: 480px) {
   .lobby-shell { padding-top: max(1.5rem, env(safe-area-inset-top)); padding-bottom: max(1.5rem, env(safe-area-inset-bottom)); }
   .lobby-shell .lobby-hero { margin-top: 1.5rem; }
   .lobby-footer { margin-top: 1.25rem; padding: 0 .125rem; }
+  .lobby-stage { margin-top: 1.75rem; }
+  .lobby-visual { height: 13rem; border-radius: 1.5rem; }
+  .lobby-character-large { transform: scale(.94); }
+  .lobby-hero h2 { font-size: 2.7rem; }
+  .lobby-visual-caption { bottom: .7rem; font-size: .6rem; }
+}
+
+@media (max-width: 767px) {
+  .match-hint { bottom: calc(100% + .75rem); }
 }
 
 .control-button:focus-visible,

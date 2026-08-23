@@ -143,25 +143,25 @@ export function TodayRunView({ wallet, onExit }: Props) {
   const terminal = Boolean(state && isTerminal(state));
 
   if (phase === 'playing' && challenge && state) {
-    return <main className="fixed inset-0 overflow-hidden bg-ink p-[max(12px,env(safe-area-inset-top))]">
+    return <main className="daily-match-shell fixed inset-0 overflow-hidden p-[max(12px,env(safe-area-inset-top))]">
       <div className="mx-auto flex h-full max-w-2xl flex-col gap-3">
-        <header className="flex shrink-0 items-center justify-between text-white">
-          <div><p className="m-0 text-[10px] font-bold uppercase tracking-[0.18em] text-teal-soft">Today&apos;s Run</p><p className="m-0 text-sm font-bold">{displayDate(challenge.date)}</p></div>
-          <div className="text-center"><p className="m-0 text-[10px] uppercase text-white/60">Score</p><p className="m-0 text-2xl font-black tabular-nums">{snake?.score ?? 0}</p></div>
-          <button className="min-h-11 rounded-full border border-white/20 px-3 text-xs font-bold text-white" onClick={onExit}>Exit</button>
+        <header className="relative z-[2] flex shrink-0 items-center justify-between rounded-2xl border border-white/15 bg-ink/70 px-4 py-3 text-white shadow-xs backdrop-blur-xs">
+          <div><p className="m-0 text-[10px] font-black uppercase tracking-[0.18em] text-teal-soft">Today&apos;s Run</p><p className="m-0 text-sm font-bold">{displayDate(challenge.date)}</p></div>
+          <div className="text-center"><p className="m-0 text-[10px] font-black uppercase tracking-[0.14em] text-white/60">Score</p><p className="m-0 text-2xl font-black tabular-nums">{snake?.score ?? 0}</p></div>
+          <button className="min-h-11 rounded-full border border-white/25 bg-white/10 px-3 text-xs font-black text-white" onClick={onExit}>Exit</button>
         </header>
 
-        <section className="relative min-h-0 flex-1 overflow-hidden rounded-2xl border-4 border-white/25 bg-grass shadow-sm" onPointerDown={(event) => { swipeStart.current = { x: event.clientX, y: event.clientY }; }} onPointerUp={(event) => finishSwipe(event.clientX, event.clientY)} onPointerCancel={() => { swipeStart.current = null; }}>
+        <section className="daily-field relative z-[2] min-h-0 flex-1 overflow-hidden rounded-[1.35rem] border-4 border-white/25 bg-grass" onPointerDown={(event) => { swipeStart.current = { x: event.clientX, y: event.clientY }; }} onPointerUp={(event) => finishSwipe(event.clientX, event.clientY)} onPointerCancel={() => { swipeStart.current = null; }}>
           <div ref={fieldHost} id="world" className="h-full w-full" />
           {!terminal && <div className="run-hint pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-white/90 px-3 py-2 text-xs font-bold text-ink shadow-xs">Swipe or use the controls</div>}
         </section>
 
-        <div className="flex shrink-0 items-end justify-between gap-4 pb-[max(0px,env(safe-area-inset-bottom))]">
+        <div className="mobile-control-dock relative z-[2] flex shrink-0 items-end justify-between gap-4 pb-[max(0px,env(safe-area-inset-bottom))]">
           <GameControls
             variant="dark"
             onTurn={turn}
             onBoostChange={boost}
-            trailing={terminal ? <button className="button-primary min-h-14 flex-1 rounded-2xl bg-lemon px-5 font-black text-ink shadow-sm" onClick={() => void finish()}>VERIFY MY SCORE</button> : undefined}
+            trailing={terminal ? <button className="button-primary min-h-14 flex-1 rounded-2xl bg-lemon px-5 font-black text-ink shadow-xs" onClick={() => void finish()}>VERIFY MY SCORE</button> : undefined}
           />
         </div>
       </div>
@@ -176,7 +176,7 @@ export function TodayRunView({ wallet, onExit }: Props) {
 
       {phase === 'ready' && challenge && <>
         <section className="daily-hero mt-8 text-center"><p className="text-xs font-black uppercase tracking-[0.2em] text-coral-deep">{displayDate(challenge.date)}</p><h1 className="mt-2 text-4xl font-black tracking-tight">Today&apos;s Run</h1><p className="mx-auto mt-3 max-w-sm text-base font-bold leading-6 text-muted">Same field. Same conditions. Pure skill.</p></section>
-        <section className="mt-7 rounded-2xl border border-line bg-card p-5 shadow-sm">
+        <section className="mt-7 rounded-2xl border border-line bg-card p-5 shadow-xs">
           <div className="flex items-center justify-between border-b border-line pb-4">
             <div><p className="m-0 text-xs font-black uppercase tracking-[0.14em] text-muted">Your best</p><p className="m-0 mt-1 text-2xl font-black tabular-nums">{personal ? personal.score.toLocaleString() : 'No score yet'}</p></div>
             <span className={`rounded-xl px-3 py-2 text-xs font-black ${personal ? 'bg-teal-soft text-grass' : 'bg-grass-soft text-grass'}`}>{personal ? `Rank #${personal.rank} today` : 'Fresh field'}</span>

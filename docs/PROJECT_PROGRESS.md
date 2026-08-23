@@ -1,6 +1,6 @@
 # PROJECT_PROGRESS — Competitive Snake (Nimiq Mini App)
 
-**Updated:** 2026-08-22 · **Phase:** W2 client UI, wallet integration, and payout preparation · **Next milestone:** real-device Nimiq Pay pass + testnet payout broadcaster
+**Updated:** 2026-08-23 · **Phase:** W2 client UI, wallet integration, and payout preparation · **Next milestone:** real-device Nimiq Pay pass + testnet payout broadcaster
 
 Source of truth: `COMPETITIVE_SNAKE_GAME.md` · Architecture: `architecture/ARCHITECTURE.md` · Lifecycle: [`docs/lifecycle/INDEX.md`](./lifecycle/INDEX.md) · Handoff: `docs/AI_HANDOFF.md`
 
@@ -21,12 +21,12 @@ The monorepo is scaffolded and green. Verified locally (2026-08-15):
 | Deterministic sim (single source of truth) | `packages/sim` | ✅ Ported from spike + arena pre-derivation (D28), context-separated RNG, `SIM_VERSION` gate (D31), golden hashes locked |
 | REST + WS server (single port, D26) | `packages/server` | ✅ Fastify + Colyseus attach; health, Today's Run verification, room APIs, wallet profiles, leaderboard, rewards schedule, payout status, admin stats; SQLite/WAL with the §6 schema |
 | Authoritative match room | `packages/server/src/rooms` | ✅ Tick loop (110ms), room codes (Crockford), bots free-play only (D5), input log capture (D27), rematch |
-| Client shell | `packages/client` | 🟡 Fresh Rink lobby, room creation/join, match HUD/controls/result sharing, responsive Today's Run flow, Lawn League Phaser art, wallet initialization, and room-code PvP are implemented; creator joins are StrictMode-safe and final snakes remain visible; real-device QA remains |
+| Client shell | `packages/client` | 🟡 Responsive Lawn League landing page, room creation/join, unified PvP/Today's Run match framing, visible mobile control docks, dimensional Phaser arena, result sharing, wallet initialization, and room-code PvP are implemented; creator joins are StrictMode-safe and final snakes remain visible; real-device QA remains |
 | CI / deploy workflows | `.github/workflows` | ✅ ci.yml (typecheck/lint/tests/build) + deploy.yml template (Railway webhook + static host) |
 
 ### Decisions made this milestone
 
-D35 (scaffold runtime: tsx source-mode, no build orchestration) · D36 (Colyseus 0.16 pinned, `defineTypes()` schemas) · D37 (2-client PvP e2e verified) · D38 (verify API shipped early) · D39 (client plays local bot matches in W1; PvP wiring in W2) · D40 (Fresh Rink UI + code-split Lawn League renderer) · D41 (Fresh Rink interaction polish) · D42 (StrictMode-safe PvP joins).
+D35 (scaffold runtime: tsx source-mode, no build orchestration) · D36 (Colyseus 0.16 pinned, `defineTypes()` schemas) · D37 (2-client PvP e2e verified) · D38 (verify API shipped early) · D39 (client plays local bot matches in W1; PvP wiring in W2) · D40 (Fresh Rink UI + code-split Lawn League renderer) · D41 (Fresh Rink interaction polish) · D42 (StrictMode-safe PvP joins) · D43 (responsive landing, unified match/mobile controls, and restrained 2.5D Phaser depth).
 
 ### Not done yet (needs human/credentials or is planned for W2)
 
@@ -40,6 +40,10 @@ D35 (scaffold runtime: tsx source-mode, no build orchestration) · D36 (Colyseus
 ---
 
 ## Success metrics (D19) — tracking
+
+## Deferred verification debt
+
+- **Server Vitest worker errors:** the server suite currently reports 40 passing tests plus 5 unhandled worker-process errors, even with `fileParallelism: false` and `--maxWorkers=1`. This is intentionally deferred until the UI work is complete; investigate Vitest/Node/better-sqlite3 process handling before release. It is not caused by the client UI changes.
 
 - ✅ Functionality: replay verification agreement is unit-tested; p95 latency, match length, crash-free — verify on device in W2.
 - ⏳ Usefulness/Repeat: N/A yet (no live users).

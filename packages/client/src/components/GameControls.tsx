@@ -25,29 +25,29 @@ interface GameControlsProps {
 export function GameControls({ variant = 'light', disabled = false, boosting = false, onTurn, onBoostChange, trailing }: GameControlsProps) {
   const padSkin =
     variant === 'light'
-      ? 'border-white/75 bg-white/88 [&>button]:border-line [&>button]:bg-card [&>button]:text-ink'
-      : 'border-white/20 bg-white/10 [&>button]:border-white/25 [&>button]:bg-ink/20 [&>button]:text-white active:[&>button]:bg-ink/35';
+      ? 'border-white/80 bg-white/88 [&>button]:border-line [&>button]:bg-card [&>button]:text-ink'
+      : 'border-white/35 bg-ink/45 [&>button]:border-white/25 [&>button]:bg-white/12 [&>button]:text-white active:[&>button]:bg-white/22';
 
   return (
     <>
-      <div className={`game-pad grid grid-cols-3 grid-rows-3 gap-1 rounded-2xl border p-2 backdrop-blur-xs ${padSkin}`}>
+      <div className={`game-pad grid grid-cols-3 grid-rows-3 gap-1 rounded-[1.35rem] border p-2 shadow-xs backdrop-blur-xs ${padSkin}`}>
         {TURNS.map(([dir, label, position]) => (
           <button
             key={dir}
             type="button"
-            className={`control-button ${position} min-h-11 min-w-11 rounded-xl border text-lg shadow-xs disabled:opacity-45`}
+            className={`control-button ${position} min-h-11 min-w-11 rounded-xl border text-lg font-black shadow-xs disabled:opacity-45`}
             disabled={disabled}
             aria-label={`Turn ${dir}`}
             onPointerDown={() => onTurn(dir)}
           >
-            {label}
+            <span aria-hidden="true">{label}</span>
           </button>
         ))}
       </div>
       {trailing ?? (
         <button
           type="button"
-          className={`boost-button control-button h-24 w-24 rounded-2xl border-4 border-white/80 bg-lemon text-sm font-black text-ink shadow-[0_5px_0_#d6be28] disabled:opacity-45 ${boosting ? 'is-boosting' : ''}`}
+          className={`boost-button control-button grid h-24 w-24 place-items-center rounded-[1.35rem] border-4 border-white/80 bg-lemon text-sm font-black text-ink shadow-[0_5px_0_#d6be28] disabled:opacity-45 ${boosting ? 'is-boosting' : ''}`}
           disabled={disabled}
           onPointerDown={() => onBoostChange(true)}
           onPointerUp={() => onBoostChange(false)}
@@ -56,7 +56,7 @@ export function GameControls({ variant = 'light', disabled = false, boosting = f
           onBlur={() => onBoostChange(false)}
           onContextMenu={(event) => event.preventDefault()}
         >
-          BOOST
+          <span><span className="block text-base leading-none">BOOST</span><span className="mt-1 block text-[9px] font-extrabold uppercase tracking-[0.12em] opacity-70">Hold</span></span>
         </button>
       )}
     </>
