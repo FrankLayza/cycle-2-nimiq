@@ -68,8 +68,14 @@
   flex: 1 1 auto;
 }
 
-/* Phaser canvas container */
-#world canvas {
+/* Phaser canvas container.
+   The canvas backing store is sized in DEVICE pixels by `createMatchGame`, so it
+   must be pinned to its host box here or it would overflow by the pixel ratio.
+   Phaser leaves the inline canvas style alone at zoom 1, which is what lets this
+   win. The class is applied by the factory; `#world` is kept for any host that
+   predates it. */
+#world canvas,
+.match-canvas-host canvas {
   display: block;
   width: 100%;
   height: 100%;

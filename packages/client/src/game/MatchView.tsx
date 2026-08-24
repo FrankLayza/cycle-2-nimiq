@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import Phaser from 'phaser';
 import { SIM_VERSION, TICK_MS, botPolicy, createRun, isTerminal, step, winnerOf } from '@snake/sim';
 import type { AppliedInput, Dir, GameState } from '@snake/sim';
 import type { Room } from 'colyseus.js';
 import { MatchScene } from './MatchScene';
+import { createMatchGame } from './createMatchGame';
 import { snapshotFromGame, snapshotFromRoom } from './renderState';
 import { swipeToDir } from './input';
 import { useKeyboardControls } from './useKeyboard';
@@ -81,15 +81,8 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
     if (!host) return;
 
     const seed = (Math.random() * 0xffffffff) >>> 0;
-    const portrait = window.innerHeight > window.innerWidth;
-    const game = new Phaser.Game({
-      type: Phaser.AUTO,
-      parent: host,
-      width: portrait ? 720 : 1280,
-      height: portrait ? 1280 : 720,
-      backgroundColor: '#8fd46a',
-      scene: [MatchScene],
-    });
+    // The field sizes itself to this host in device pixels and follows rotation.
+    const { game, dispose } = createMatchGame(host);
     const scene = () => game.scene.getScene('Match') as MatchScene;
     let sim: GameState = createRun(seed, 'bot', SIM_VERSION);
     let running = true;
@@ -229,7 +222,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
       canvas?.removeEventListener('pointerup', onUp);
       void roomRef.current?.leave();
       roomRef.current = null;
-      game.destroy(true);
+      dispose();
     };
   }, [mode, roomCode, wallet]);
 

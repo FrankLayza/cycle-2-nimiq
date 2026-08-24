@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import Phaser from 'phaser';
 import { SIM_VERSION, TICK_MS, createRun, isTerminal, step, todayScore } from '@snake/sim';
 import type { AppliedInput, Dir, GameState } from '@snake/sim';
 import { signWalletMessage } from '../wallet/provider';
 import { MatchScene } from '../game/MatchScene';
+import { createMatchGame } from '../game/createMatchGame';
+import type { ResponsiveGame } from '../game/createMatchGame';
 import { snapshotFromGame } from '../game/renderState';
 import { useKeyboardControls } from '../game/useKeyboard';
 import { GameControls } from '../components/GameControls';
@@ -38,7 +39,7 @@ export function TodayRunView({ wallet, onExit }: Props) {
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const runId = useRef(crypto.randomUUID());
   const fieldHost = useRef<HTMLDivElement | null>(null);
-  const phaserGame = useRef<Phaser.Game | null>(null);
+  const phaserGame = useRef<ResponsiveGame | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -110,25 +111,19 @@ export function TodayRunView({ wallet, onExit }: Props) {
 
   useEffect(() => {
     if (phase !== 'playing' || !fieldHost.current || phaserGame.current) return;
-    const portrait = window.innerHeight > window.innerWidth;
-    const game = new Phaser.Game({
-      type: Phaser.AUTO,
-      parent: fieldHost.current,
-      width: portrait ? 720 : 1280,
-      height: portrait ? 1280 : 720,
-      backgroundColor: '#8fd46a',
-      scene: [MatchScene],
-    });
-    phaserGame.current = game;
+    // Shared factory: device-pixel backing store, follows rotation and resize.
+    const handle = createMatchGame(fieldHost.current);
+    phaserGame.current = handle;
     return () => {
-      game.destroy(true);
+      handle.dispose();
       phaserGame.current = null;
     };
   }, [phase]);
 
   useEffect(() => {
-    const game = phaserGame.current;
-    if (!game || !state) return;
+    const handle = phaserGame.current;
+    if (!handle || !state) return;
+    const { game } = handle;
     const submit = () => (game.scene.getScene('Match') as MatchScene).submitSnapshot(snapshotFromGame(state));
     if (game.scene.isActive('Match')) submit();
     else window.setTimeout(submit, 0);
