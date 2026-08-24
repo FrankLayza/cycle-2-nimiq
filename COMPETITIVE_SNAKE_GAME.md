@@ -165,6 +165,7 @@
 | D40 | **W2 UI implementation = Fresh Rink application shell + code-split Lawn League renderer.** Lobby, match HUD/controls/result/share, and Today's Run states are mobile-first with safe-area handling, 44px controls, restrained motion, and reduced-motion fallbacks. Phaser/Today's Run load on demand; initial app JS is ~102 kB gzip. Exact collision-loss reasons remain deferred until the authoritative sim exposes a cause via a deliberate versioned contract. | ✅ Done |
 | D41 | **Fresh Rink interaction polish:** retain the warm, friendly lawn identity while increasing ink/muted contrast and standardizing primary coral buttons on restrained lift/press motion. Coral remains the primary action color; lemon is reserved for boost/reward emphasis; reduced-motion fallbacks remain mandatory. | ✅ Approved |
 | D42 | **PvP room joins must be StrictMode-safe:** defer the client Colyseus join until the mount survives React's development effect probe, preventing one creator from opening two seats and auto-starting their own room. | ✅ Done |
+| D43 | **UI polish pass:** preserve the render-only Phaser boundary while upgrading the responsive Lawn League landing page, unifying PvP/Today's Run match framing and mobile control docks, adding restrained 2.5D lawn depth/contact shadows, and strengthening pickup, boost, and shrink feedback. No sim, room, wallet, or reward behavior changes. | ✅ Done |
 
 ---
 

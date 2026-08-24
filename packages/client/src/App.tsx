@@ -38,7 +38,7 @@ export function App() {
   };
 
   return (
-    <div className="app h-full">
+    <div className="app min-h-full">
       {screen === 'lobby' ? (
         <Lobby
           wallet={wallet}
@@ -58,11 +58,24 @@ export function App() {
           onExit={() => setScreen('lobby')}
           onRematch={() => setMatchKey((k) => k + 1)}
         /></Suspense>
-      ) : screen === 'today' ? <Suspense fallback={<ScreenLoader label="Preparing today’s field…" />}><TodayRunView wallet={wallet} onExit={() => setScreen('lobby')} /></Suspense> : <Suspense fallback={<ScreenLoader label="Joining the room…" />}><MatchView key={roomCode} mode="pvp" roomCode={roomCode} wallet={wallet?.address} onExit={() => setScreen('lobby')} onRematch={() => setRoomCode(roomCode)} /></Suspense>}
+      ) : screen === 'today' ? (
+        <Suspense fallback={<ScreenLoader label="Preparing today’s field…" />}><TodayRunView wallet={wallet} onExit={() => setScreen('lobby')} /></Suspense>
+      ) : (
+        <Suspense fallback={<ScreenLoader label="Joining the room…" />}><MatchView key={roomCode} mode="pvp" roomCode={roomCode} wallet={wallet?.address} onExit={() => setScreen('lobby')} onRematch={() => setRoomCode(roomCode)} /></Suspense>
+      )}
     </div>
   );
 }
 
 function ScreenLoader({ label }: { label: string }) {
-  return <div className="fixed inset-0 grid place-items-center bg-cream text-center"><div><div className="loading-snake mx-auto mb-4 h-8 w-24 rounded-full bg-teal" /><p className="font-bold text-ink">{label}</p></div></div>;
+  return (
+    <div className="fixed inset-0 grid place-items-center bg-cream text-center p-6">
+      <div className="status-pop flex flex-col items-center">
+        <div className="loading-snake mb-5 h-8 w-28 rounded-full bg-linear-to-r from-teal to-teal-dark shadow-xs" />
+        <p className="m-0 text-base font-black tracking-tight text-ink">{label}</p>
+        <span className="mt-2 text-xs font-bold uppercase tracking-widest text-muted">Lawn League</span>
+      </div>
+    </div>
+  );
 }
+

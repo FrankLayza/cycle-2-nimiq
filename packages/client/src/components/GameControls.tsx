@@ -19,44 +19,81 @@ interface GameControlsProps {
 }
 
 /**
- * Shared d-pad + boost vocabulary for every game surface (MatchView,
+ * Shared 2.5D tactile D-pad + boost vocabulary for every game surface (MatchView,
  * TodayRunView). Renders a fragment so each view owns its layout.
  */
-export function GameControls({ variant = 'light', disabled = false, boosting = false, onTurn, onBoostChange, trailing }: GameControlsProps) {
+export function GameControls({
+  variant = 'light',
+  disabled = false,
+  boosting = false,
+  onTurn,
+  onBoostChange,
+  trailing,
+}: GameControlsProps) {
   const padSkin =
     variant === 'light'
-      ? 'border-white/75 bg-white/88 [&>button]:border-line [&>button]:bg-card [&>button]:text-ink'
-      : 'border-white/20 bg-white/10 [&>button]:border-white/25 [&>button]:bg-ink/20 [&>button]:text-white active:[&>button]:bg-ink/35';
+      ? 'border-white/85 bg-white/90 shadow-md'
+      : 'border-white/20 bg-ink/75 shadow-lg';
+
+  const keySkin =
+    variant === 'light'
+      ? 'dpad-key bg-linear-to-b from-white to-cream border border-line text-ink'
+      : 'dpad-key dpad-key-dark bg-linear-to-b from-slate-700 to-slate-800 border border-white/20 text-white';
 
   return (
     <>
-      <div className={`game-pad grid grid-cols-3 grid-rows-3 gap-1 rounded-2xl border p-2 backdrop-blur-xs ${padSkin}`}>
+      <div
+        className={`game-pad grid grid-cols-3 grid-rows-3 gap-1.5 rounded-[1.5rem] border p-2 backdrop-blur-md ${padSkin}`}
+      >
         {TURNS.map(([dir, label, position]) => (
           <button
             key={dir}
             type="button"
-            className={`control-button ${position} min-h-11 min-w-11 rounded-xl border text-lg shadow-xs disabled:opacity-45`}
+            className={`${position} ${keySkin} h-12 w-12 rounded-xl text-lg font-black disabled:opacity-40 disabled:cursor-not-allowed select-none touch-none`}
             disabled={disabled}
             aria-label={`Turn ${dir}`}
-            onPointerDown={() => onTurn(dir)}
+            onPointerDown={(e) => {
+              e.preventDefault();
+              onTurn(dir);
+            }}
           >
-            {label}
+            <span aria-hidden="true" className="drop-shadow-xs">{label}</span>
           </button>
         ))}
       </div>
+
       {trailing ?? (
         <button
           type="button"
-          className={`boost-button control-button h-24 w-24 rounded-2xl border-4 border-white/80 bg-lemon text-sm font-black text-ink shadow-[0_5px_0_#d6be28] disabled:opacity-45 ${boosting ? 'is-boosting' : ''}`}
+          className={`boost-button btn-3d grid h-24 w-24 place-items-center rounded-[1.6rem] border-4 border-white/90 text-sm font-black text-ink select-none touch-none disabled:opacity-40 disabled:cursor-not-allowed ${
+            boosting ? 'is-boosting ring-4 ring-lemon/50' : ''
+          }`}
           disabled={disabled}
-          onPointerDown={() => onBoostChange(true)}
-          onPointerUp={() => onBoostChange(false)}
-          onPointerCancel={() => onBoostChange(false)}
-          onPointerLeave={() => onBoostChange(false)}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            onBoostChange(true);
+          }}
+          onPointerUp={(e) => {
+            e.preventDefault();
+            onBoostChange(false);
+          }}
+          onPointerCancel={(e) => {
+            e.preventDefault();
+            onBoostChange(false);
+          }}
+          onPointerLeave={(e) => {
+            e.preventDefault();
+            onBoostChange(false);
+          }}
           onBlur={() => onBoostChange(false)}
           onContextMenu={(event) => event.preventDefault()}
         >
-          BOOST
+          <span className="flex flex-col items-center">
+            <span className="block text-lg font-black leading-none tracking-wider">BOOST</span>
+            <span className="mt-1 block text-[9px] font-black uppercase tracking-widest text-ink/75 bg-lemon-dark/30 px-2 py-0.5 rounded-full">
+              {boosting ? 'BURNING' : 'HOLD'}
+            </span>
+          </span>
         </button>
       )}
     </>

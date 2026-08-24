@@ -98,9 +98,6 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
 
     if (mode === 'pvp' && roomCode) {
       setPhase('connecting');
-      // React StrictMode mounts effects once, cleans them up, then mounts
-      // them again in development. Defer the network join so the probe
-      // connection is cancelled before it can occupy a room seat.
       connectTimer = setTimeout(() => {
         const client = createMatchClient();
         void joinPvp(client, roomCode, wallet)
@@ -263,7 +260,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
 
   const shareResult = async () => {
     if (!result) return;
-    const text = `${result.outcome === 'win' ? 'I won' : result.outcome === 'draw' ? 'I drew' : 'I scored'} ${result.you.score.toLocaleString()} in Competitive Snake. Grow. Boost. Outplay.`;
+    const text = `${result.outcome === 'win' ? '🏆 I won' : result.outcome === 'draw' ? '🤝 I drew' : 'I scored'} ${result.you.score.toLocaleString()} in Competitive Snake. Grow. Boost. Outplay.`;
     setSharing(true);
     setShareNote('');
     try {
@@ -294,83 +291,167 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
             : 'Get ready'
           : null;
 
+  const isLeading = hud.you > hud.rival;
+  const isTied = hud.you === hud.rival;
+
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-cream">
       <div
         id="world"
-        className="match-shell relative h-full w-full overflow-hidden bg-[#0b0e14] landscape:aspect-video landscape:h-auto landscape:w-[min(100vw,calc(100vh*16/9))] landscape:rounded-[10px]"
+        className="match-shell relative h-full w-full overflow-hidden bg-[#0b0e14] landscape:aspect-video landscape:h-auto landscape:w-[min(100vw,calc(100vh*16/9))] landscape:rounded-2xl shadow-2xl"
       >
         <div ref={hostRef} className="h-full w-full" />
-        <div className="match-hud pointer-events-none absolute left-4 right-4 top-4 flex items-start justify-between gap-3">
-          <div className="match-stat min-w-24 rounded-2xl border border-white/75 bg-white/88 px-3.5 py-2.5 text-left text-ink shadow-xs backdrop-blur-xs">
-            <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-coral-dark">You</span>
-            <b key={hud.you} className="score-pop mt-0.5 block text-2xl leading-none tabular-nums">{hud.you.toLocaleString()}</b>
-          </div>
-          <div className="flex flex-col items-center gap-1.5">
-            <div className="match-clock rounded-2xl border border-white/75 bg-ink/90 px-4 py-2.5 text-center font-black text-white shadow-xs backdrop-blur-xs">
-              <span className="block text-lg leading-none tabular-nums">{matchClock}</span>
-              <span className="mt-1 block text-[9px] uppercase tracking-[0.12em] text-coral-soft">Shrink {String(shrinkCountdown).padStart(2, '0')}</span>
+
+        <div className="match-hud pointer-events-none absolute left-3 right-3 top-3 sm:top-4 mx-auto max-w-2xl flex items-center justify-between gap-2 sm:gap-3 z-10">
+          <div className="hud-card-2d min-w-20 sm:min-w-24 rounded-2xl p-2 sm:p-2.5 text-left shadow-md">
+            <div className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-coral shadow-[0_0_8px_#ff686b]" />
+              <span className="text-[10px] font-black uppercase tracking-wider text-coral-dark">You</span>
+              {isLeading && !isTied && (
+                <span className="ml-auto rounded-full bg-lemon px-1.5 py-0.2 text-[8px] font-black text-ink">
+                  LEAD
+                </span>
+              )}
             </div>
+            <b key={hud.you} className="score-pop mt-0.5 block text-2xl sm:text-3xl font-black leading-none tabular-nums text-ink">
+              {hud.you.toLocaleString()}
+            </b>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="hud-card-dark rounded-2xl px-3.5 py-1.5 sm:px-5 sm:py-2 text-center text-white shadow-md">
+              <span className="block text-base sm:text-lg font-black leading-tight tabular-nums tracking-wide">{matchClock}</span>
+              <span className={`block text-[9px] font-black uppercase tracking-wider ${shrinkCountdown <= 3 ? 'text-lemon animate-pulse' : 'text-coral-soft'}`}>
+                Shrink {String(shrinkCountdown).padStart(2, '0')}s
+              </span>
+            </div>
+
             {!result && (
               <button
-                className="pointer-events-auto min-h-11 rounded-full border border-white/75 bg-white/88 px-4 py-2 text-xs font-black uppercase tracking-[0.08em] text-ink shadow-xs backdrop-blur-xs"
+                type="button"
+                className="btn-3d btn-3d-white pointer-events-auto rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 text-[10px] font-black uppercase tracking-wider shadow-sm"
                 onClick={onExit}
               >
-                Exit match
+                Exit
               </button>
             )}
           </div>
-          <div className="match-stat min-w-24 rounded-2xl border border-white/75 bg-white/88 px-3.5 py-2.5 text-right text-ink shadow-xs backdrop-blur-xs">
-            <span className="block text-[9px] font-black uppercase tracking-[0.14em] text-grass">Rival</span>
-            <b key={hud.rival} className="score-pop mt-0.5 block text-2xl leading-none tabular-nums">{hud.rival.toLocaleString()}</b>
+
+          <div className="hud-card-2d min-w-20 sm:min-w-24 rounded-2xl p-2 sm:p-2.5 text-right shadow-md">
+            <div className="flex items-center justify-end gap-1.5">
+              {!isLeading && !isTied && (
+                <span className="mr-auto rounded-full bg-teal px-1.5 py-0.2 text-[8px] font-black text-ink">
+                  LEAD
+                </span>
+              )}
+              <span className="text-[10px] font-black uppercase tracking-wider text-grass-deep">Rival</span>
+              <span className="h-2.5 w-2.5 rounded-full bg-teal shadow-[0_0_8px_#35c982]" />
+            </div>
+            <b key={hud.rival} className="score-pop mt-0.5 block text-2xl sm:text-3xl font-black leading-none tabular-nums text-ink">
+              {hud.rival.toLocaleString()}
+            </b>
           </div>
         </div>
 
         {phaseMessage && (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-ink/25 backdrop-blur-xs">
-            <div className="status-panel w-[min(88%,20rem)] rounded-2xl bg-cream px-6 py-5 text-center text-ink shadow-sm">
-              <div className="loading-snake mx-auto mb-4 h-6 w-16 rounded-full bg-teal" />
-              {phaseMessage}
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-ink/35 backdrop-blur-xs z-20">
+            <div className="status-pop w-[min(88%,22rem)] text-center text-ink">
+              <div className="loading-snake mx-auto mb-4 h-7 w-20 rounded-full bg-teal" />
+              <p className="m-0 text-base font-black tracking-tight">{phaseMessage}</p>
             </div>
           </div>
         )}
 
         {phase === 'error' && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-ink/70 px-6 text-center text-white">
-            <p className="max-w-[42ch] text-base">{error}</p>
-            <button className="button-primary min-h-12 rounded-xl bg-white px-5 py-2 font-bold text-ink" onClick={onExit}>
-              Return to lobby
-            </button>
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-ink/80 px-6 text-center text-white backdrop-blur-xs z-20">
+            <div className="status-pop max-w-sm">
+              <p className="text-base font-bold text-coral-deep">{error}</p>
+              <button
+                type="button"
+                className="btn-3d btn-3d-coral mt-4 min-h-12 w-full rounded-xl text-sm font-black"
+                onClick={onExit}
+              >
+                Return to Lobby
+              </button>
+            </div>
           </div>
         )}
 
-        <div className="match-controls absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3">
+        {/* Desktop Controls Helper - Centered between D-Pad and Boost */}
+        <div className="pointer-events-none hidden md:flex absolute bottom-5 left-1/2 -translate-x-1/2 items-center gap-2 rounded-xl bg-ink/80 px-3.5 py-1.5 text-[11px] font-bold text-white shadow-md backdrop-blur-xs z-10">
+          <span className="rounded bg-white/20 px-1.5 py-0.5 font-mono text-[10px]">WASD / ARROWS</span>
+          <span>Turn</span>
+          <span className="text-white/40">·</span>
+          <span className="rounded bg-white/20 px-1.5 py-0.5 font-mono text-[10px]">SPACE</span>
+          <span>Boost</span>
+        </div>
+
+        <div className="mobile-control-dock match-controls absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3">
           {!hasTurned && (
-            <div className="match-hint pointer-events-none absolute bottom-[94px] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-xl border border-white/75 bg-white/88 px-3.5 py-2 text-[12px] font-bold text-ink shadow-xs backdrop-blur-xs">
-              {hud.boosting ? 'Boosting · tail burns' : 'Swipe, tap the pad, or use arrow keys'}
+            <div className="match-hint pointer-events-none absolute bottom-[calc(100%+14px)] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-xl border border-white/80 bg-white/95 px-4 py-2 text-xs font-black text-ink shadow-md backdrop-blur-xs">
+              {hud.boosting ? '🔥 Boosting · Tail burning' : '👉 Swipe, tap D-Pad, or use arrow keys'}
             </div>
           )}
-          <GameControls variant="light" disabled={!controlsEnabled} boosting={hud.boosting} onTurn={setTurn} onBoostChange={setBoost} />
+          <GameControls
+            variant="light"
+            disabled={!controlsEnabled}
+            boosting={hud.boosting}
+            onTurn={setTurn}
+            onBoostChange={setBoost}
+          />
         </div>
       </div>
 
       {result && (
-        <div className="result-backdrop fixed inset-0 z-10 grid place-items-center bg-ink/55 p-5 text-center backdrop-blur-xs">
-          <div className="result-panel w-full max-w-sm rounded-2xl border border-white/70 bg-cream p-6 shadow-[0_24px_70px_rgb(23_34_53_/_28%)] sm:p-8">
-          <h2 className="result-hero m-0 text-4xl font-black">{result.outcome === 'win' ? 'You win' : result.outcome === 'loss' ? 'Rival wins' : 'Draw'}</h2>
-          <div className="result-score mx-auto rounded-2xl border border-line bg-white px-4 py-3"><span className="block text-[10px] font-black uppercase tracking-[0.14em] text-muted">Your score</span><strong className="mt-1 block text-3xl font-black leading-none tabular-nums">{result.you.score.toLocaleString()}</strong></div>
-          <p className="result-detail m-0 mb-2 text-sm text-muted">{result.you.length} segments · <span className="font-semibold text-grass-deep">Score verified</span></p>
-          <button
-            className="button-primary mt-4 min-h-14 w-full rounded-2xl border-none bg-coral p-4 text-xl font-extrabold text-ink"
-            onClick={handleRematch}
-          >
-            Rematch
-          </button>
-          <div className="mt-3 grid grid-cols-2 gap-2">
-            <button className="min-h-11 rounded-full border border-line bg-card px-4 text-sm font-bold text-ink" onClick={() => void shareResult()} disabled={sharing}>{sharing ? 'Sharing…' : 'Share'}</button>
-            <button className="min-h-11 rounded-full border border-line bg-card px-4 text-sm font-bold text-ink" onClick={onExit}>Lobby</button>
-          </div>
-          {shareNote && <p className="m-0 mt-2 text-xs font-semibold text-grass-deep" role="status">{shareNote}</p>}
+        <div className="result-backdrop fixed inset-0 z-20 grid place-items-center bg-ink/65 p-5 text-center backdrop-blur-xs">
+          <div className="result-panel w-full max-w-sm rounded-3xl border-2 border-white/85 bg-cream p-6 shadow-2xl sm:p-8">
+            <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl shadow-inner text-3xl">
+              {result.outcome === 'win' ? '🏆' : result.outcome === 'loss' ? '💔' : '🤝'}
+            </div>
+            <h2 className="result-hero m-0 text-3xl sm:text-4xl font-black text-ink">
+              {result.outcome === 'win' ? 'Victory!' : result.outcome === 'loss' ? 'Rival Wins' : 'Draw Match'}
+            </h2>
+
+            <div className="result-score my-4 rounded-2xl border border-line bg-card p-4 shadow-sm">
+              <span className="block text-[10px] font-black uppercase tracking-widest text-muted">Final Score</span>
+              <strong className="mt-1 block text-4xl font-black leading-none tabular-nums text-ink">
+                {result.you.score.toLocaleString()}
+              </strong>
+              <div className="mt-2 flex items-center justify-center gap-2 text-xs font-bold text-muted">
+                <span>{result.you.length} segments</span>
+                <span>·</span>
+                <span className="font-extrabold text-grass-deep flex items-center gap-1">
+                  <span className="h-1.5 w-1.5 rounded-full bg-teal" />
+                  Score Verified
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="btn-3d btn-3d-coral min-h-14 w-full rounded-2xl text-xl font-black"
+              onClick={handleRematch}
+            >
+              REMATCH
+            </button>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                className="btn-3d btn-3d-white min-h-12 rounded-xl text-xs font-black"
+                onClick={() => void shareResult()}
+                disabled={sharing}
+              >
+                {sharing ? 'Sharing…' : 'Share Score 📤'}
+              </button>
+              <button
+                type="button"
+                className="btn-3d btn-3d-white min-h-12 rounded-xl text-xs font-black"
+                onClick={onExit}
+              >
+                Lobby 🏠
+              </button>
+            </div>
+            {shareNote && <p className="m-0 mt-3 text-xs font-bold text-grass-deep" role="status">{shareNote}</p>}
           </div>
         </div>
       )}
