@@ -21,15 +21,17 @@ function inBounds(b: Bounds, x: number, y: number): boolean {
 }
 
 /**
- * Create a fresh run. `solo` = one seeded snake (Today's Run, D28);
- * `bot`/`pvp` = two snakes. The arena is pre-derived from the seed (D28/D31).
+ * Create a fresh run. `solo` = one seeded snake (Today's Run, D28), `bot` =
+ * two snakes, and `pvp` = two to four active players. The arena is
+ * pre-derived from the seed (D28/D31).
  */
-export function createRun(seed: number, mode: Mode, version: number = SIM_VERSION): GameState {
+export function createRun(seed: number, mode: Mode, version: number = SIM_VERSION, playerCount?: number): GameState {
   if (version !== SIM_VERSION) {
     throw new Error(`SIM_VERSION mismatch: got ${version}, expected ${SIM_VERSION}`);
   }
   const arena = deriveArena(seed);
-  const seatIds = mode === 'solo' ? [0] : [0, 1];
+  const count = mode === 'solo' ? 1 : mode === 'bot' ? 2 : Math.max(2, Math.min(4, Math.trunc(playerCount ?? 4)));
+  const seatIds = Array.from({ length: count }, (_, id) => id);
   const snakes: SnakeState[] = seatIds.map((id) => {
     const spawn = SPAWNS[id];
     return {
@@ -55,6 +57,7 @@ export function createRun(seed: number, mode: Mode, version: number = SIM_VERSIO
     bounds: { x0: 0, y0: 0, x1: GRID_SIZE - 1, y1: GRID_SIZE - 1 },
     pellets,
     snakes,
+    playerCount: count,
     normalIdx: 0,
     bountyIdx: 0,
     arena,
@@ -174,20 +177,29 @@ export function step(state: GameState, inputs: AppliedInput[]): GameState {
 
   // 4. Collisions (server-authoritative rules, ported from spike).
   //    Head-on: longer survives; equal → most recent turner loses; never-turned tie → both die.
-  const h0 = snakes[0];
-  const h1 = snakes[1];
-  if (h0 && h1 && h0.alive && h1.alive) {
-    const a = h0.cells[0];
-    const b2 = h1.cells[0];
-    if (a.x === b2.x && a.y === b2.y) {
-      if (h0.cells.length !== h1.cells.length) {
-        (h0.cells.length > h1.cells.length ? h1 : h0).alive = false;
-      } else if (h0.lastTurnTick === h1.lastTurnTick) {
-        h0.alive = false;
-        h1.alive = false;
-      } else {
-        (h0.lastTurnTick > h1.lastTurnTick ? h0 : h1).alive = false;
-      }
+  const headGroups = new Map<string, SnakeState[]>();
+  for (const sn of snakes) {
+    if (!sn.alive) continue;
+    const h = sn.cells[0];
+    const key = `${h.x},${h.y}`;
+    const group = headGroups.get(key);
+    if (group) group.push(sn);
+    else headGroups.set(key, [sn]);
+  }
+  for (const group of headGroups.values()) {
+    if (group.length < 2) continue;
+    const longest = Math.max(...group.map((sn) => sn.cells.length));
+    const contenders = group.filter((sn) => sn.cells.length === longest);
+    if (contenders.length === 1) {
+      for (const sn of group) if (sn !== contenders[0]) sn.alive = false;
+      continue;
+    }
+    const oldestTurn = Math.min(...contenders.map((sn) => sn.lastTurnTick));
+    const oldest = contenders.filter((sn) => sn.lastTurnTick === oldestTurn);
+    if (oldest.length === 1) {
+      for (const sn of group) if (sn !== oldest[0]) sn.alive = false;
+    } else {
+      for (const sn of group) sn.alive = false;
     }
   }
   //    Head vs body: attacker dies, defender gains +3.

@@ -66,6 +66,7 @@ export interface GameState {
   bounds: Bounds;
   pellets: Pellet[];
   snakes: SnakeState[];
+  playerCount: number;
   normalIdx: number; // next arena.normalSpawns candidate
   bountyIdx: number; // next arena.bountySpawns candidate
   arena: Arena; // derived once at createRun — never mutated after

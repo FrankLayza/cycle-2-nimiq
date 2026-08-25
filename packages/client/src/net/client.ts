@@ -126,5 +126,5 @@ export function createMatchClient(wsUrl = '/colyseus'): Client {
 }
 
 export function joinPvp(client: Client, code: RoomCode, wallet?: string): Promise<Room<ClientMatchState>> {
-  return client.joinOrCreate<ClientMatchState>('match', { mode: 'pvp', code: normalizeRoomCode(code), wallet }, ClientMatchState);
+  return client.joinOrCreate<ClientMatchState>('match', { mode: 'pvp', code: normalizeRoomCode(code), wallet, maxPlayers: 4 }, ClientMatchState);
 }

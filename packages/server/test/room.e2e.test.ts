@@ -140,16 +140,20 @@ afterAll(async () => {
   rmSync(tmp, { recursive: true, force: true });
 });
 
-describe('MatchRoom e2e (2 Colyseus clients)', () => {
-  it('runs a full authoritative PvP match both clients can observe', async () => {
+describe('MatchRoom e2e (four Colyseus clients)', () => {
+  it('runs a full authoritative four-player PvP match', async () => {
     const c1 = new Client(`ws://localhost:${port}`);
     const c2 = new Client(`ws://localhost:${port}`);
-    const room1 = await c1.joinOrCreate('match', { mode: 'pvp', code: 'ABCD', wallet: 'w1' }, ClientMatchState);
+    const c3 = new Client(`ws://localhost:${port}`);
+    const c4 = new Client(`ws://localhost:${port}`);
+    const room1 = await c1.joinOrCreate('match', { mode: 'pvp', code: 'ABCD', wallet: 'w1', maxPlayers: 4 }, ClientMatchState);
     await waitFor(() => room1.state.snakes.size === 1, 2000);
     expect(room1.state.status).toBe('lobby');
     expect(room1.state.snakes.size).toBe(1);
 
     const room2 = await c2.joinOrCreate('match', { mode: 'pvp', code: 'ABCD', wallet: 'w2' }, ClientMatchState);
+    const room3 = await c3.joinOrCreate('match', { mode: 'pvp', code: 'ABCD', wallet: 'w3' }, ClientMatchState);
+    const room4 = await c4.joinOrCreate('match', { mode: 'pvp', code: 'ABCD', wallet: 'w4' }, ClientMatchState);
 
     // Both clients seated → countdown → playing (state patches land async).
     await waitFor(() => room1.state.mode === 'pvp' && room1.state.status === 'playing', 15000);
@@ -157,6 +161,9 @@ describe('MatchRoom e2e (2 Colyseus clients)', () => {
     await waitFor(() => (room1.state.snakes.get('0')?.cells.length ?? 0) > 0, 2000);
     expect(room1.state.snakes.get('0')?.cells.length).toBeGreaterThan(0);
     expect(room1.state.snakes.get('1')?.cells.length).toBeGreaterThan(0);
+    expect(room1.state.snakes.size).toBe(4);
+    expect(room1.state.snakes.get('2')?.cells.length).toBeGreaterThan(0);
+    expect(room1.state.snakes.get('3')?.cells.length).toBeGreaterThan(0);
     expect([...room1.state.snakes.values()].map((snake) => snake.sessionId)).toEqual(
       expect.arrayContaining([room1.sessionId, room2.sessionId]),
     );
@@ -167,6 +174,8 @@ describe('MatchRoom e2e (2 Colyseus clients)', () => {
     for (let i = 0; i < 20; i++) {
       room1.send('input', { turn: i % 9 === 0 ? 'up' : null, boost: i % 13 === 0 });
       room2.send('input', { turn: i % 7 === 0 ? 'down' : null, boost: i % 11 === 0 });
+      room3.send('input', { turn: i % 5 === 0 ? 'left' : null, boost: i % 17 === 0 });
+      room4.send('input', { turn: i % 3 === 0 ? 'right' : null, boost: i % 19 === 0 });
       await sleep(140);
     }
 
@@ -178,10 +187,12 @@ describe('MatchRoom e2e (2 Colyseus clients)', () => {
 
     const result = JSON.parse(room1.state.resultJson) as MatchResultJson;
     expect(result.ticks).toBe(room1.state.tick);
-    expect(result.snakes).toHaveLength(2);
+    expect(result.snakes).toHaveLength(4);
     expect(result.snakes.filter((sn) => sn.alive).length).toBeLessThanOrEqual(1);
 
     await room1.leave();
     await room2.leave();
+    await room3.leave();
+    await room4.leave();
   }, 45000);
 });

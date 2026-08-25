@@ -1,5 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Lobby } from './components/Lobby';
+import { LandscapeStage } from './shell/LandscapeStage';
 import { connectWallet, getWallet, initializeWallet } from './wallet/provider';
 import type { WalletIdentity } from './wallet/provider';
 
@@ -26,7 +27,7 @@ export function App() {
     try {
       const response = await fetch(`${import.meta.env.VITE_API_URL ?? '/api/v1'}/rooms`, {
         method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ mode: 'pvp', maxPlayers: 2 }),
+        body: JSON.stringify({ mode: 'pvp', maxPlayers: 4 }),
       });
       if (!response.ok) throw new Error('Could not create room');
       const room = await response.json() as { code: string };
@@ -38,8 +39,9 @@ export function App() {
   };
 
   return (
-    <div className="app min-h-full">
-      {screen === 'lobby' ? (
+    <LandscapeStage>
+      <div className="app h-full min-h-full overflow-hidden">
+        {screen === 'lobby' ? (
         <Lobby
           wallet={wallet}
           onConnectWallet={handleConnect}
@@ -63,7 +65,8 @@ export function App() {
       ) : (
         <Suspense fallback={<ScreenLoader label="Joining the room…" />}><MatchView key={roomCode} mode="pvp" roomCode={roomCode} wallet={wallet?.address} onExit={() => setScreen('lobby')} onRematch={() => setRoomCode(roomCode)} /></Suspense>
       )}
-    </div>
+      </div>
+    </LandscapeStage>
   );
 }
 

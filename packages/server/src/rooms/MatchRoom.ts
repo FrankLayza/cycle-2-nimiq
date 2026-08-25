@@ -5,12 +5,14 @@ import type { AppliedInput, GameState } from '@snake/sim';
 import { CellState, MatchState, PelletState, SnakeState } from './schema.js';
 
 const DEFAULT_INPUT: AppliedInput = { turn: null, boost: false };
-const SEAT_COUNT = 2;
+const SEAT_COUNT = 4;
+const MIN_PLAYERS_TO_START = 2;
 
 interface RoomOptions {
   mode?: string;
   code?: string;
   seed?: number;
+  maxPlayers?: number;
 }
 
 interface JoinOptions {
@@ -30,12 +32,13 @@ interface ClientMessage {
  * Bots only ever appear in free-play `bot` mode (D5).
  */
 export class MatchRoom extends Room<MatchState> {
-  maxClients = 4; // 2 seats + up to 2 spectators (W1)
+  maxClients = SEAT_COUNT + 1;
 
   /** Applied inputs per tick, per seat — the verification payload. */
   inputLog: AppliedInput[][] = [];
 
   private mode: 'bot' | 'pvp' = 'bot';
+  private maxSeats = SEAT_COUNT;
   private seed = 0;
   private sim: GameState | null = null;
   private pending: (AppliedInput | null)[] = [null, null];
@@ -45,9 +48,15 @@ export class MatchRoom extends Room<MatchState> {
   private tickTimer: ReturnType<typeof setInterval> | null = null;
   private countdownTimer: ReturnType<typeof setInterval> | null = null;
   private countdownLeft = 0;
+  private playerCount = 0;
 
   onCreate(options: RoomOptions = {}) {
     this.mode = options.mode === 'pvp' ? 'pvp' : 'bot';
+    const requestedSeats = Number(options.maxPlayers ?? SEAT_COUNT);
+    this.maxSeats = this.mode === 'pvp' && Number.isInteger(requestedSeats)
+      ? Math.min(SEAT_COUNT, Math.max(MIN_PLAYERS_TO_START, requestedSeats))
+      : this.mode === 'pvp' ? SEAT_COUNT : 2;
+    this.maxClients = this.maxSeats + 1;
     this.seed = options.seed ?? ((Math.random() * 0xffffffff) >>> 0);
     this.setState(new MatchState());
     this.state.roomId = this.roomId;
@@ -69,9 +78,18 @@ export class MatchRoom extends Room<MatchState> {
     });
   }
 
+  onAuth() {
+    if (this.state.status === 'lobby' || this.state.status === 'countdown') {
+      if (this.mode === 'bot') return this.seatOf.size === 0;
+      return this.freeSeat() !== null;
+    }
+    return false;
+  }
+
   onJoin(client: Client, options: JoinOptions = {}) {
+    if (this.state.status !== 'lobby' && this.state.status !== 'countdown') return;
     const seat = this.freeSeat();
-    if (seat === null) return; // spectator — state still syncs
+    if (seat === null) return;
     this.seatOf.set(client.sessionId, seat);
     this.addSnake(seat, options.wallet ?? 'anon', false, client.sessionId);
     // Bots only in free-play (D5): fill seat 1 as soon as the first human arrives.
@@ -98,7 +116,7 @@ export class MatchRoom extends Room<MatchState> {
   // ---- internals ----
 
   private freeSeat(): number | null {
-    for (let seat = 0; seat < SEAT_COUNT; seat++) {
+    for (let seat = 0; seat < this.maxSeats; seat++) {
       if (this.botSeat === seat) continue;
       let taken = false;
       this.seatOf.forEach((s) => {
@@ -115,13 +133,13 @@ export class MatchRoom extends Room<MatchState> {
     snake.sessionId = sessionId;
     snake.wallet = wallet;
     snake.isBot = isBot;
-    snake.color = seat === 0 ? '#ff6b6b' : '#3ddc84';
+    snake.color = ['#ff6b6b', '#3ddc84', '#6b9cff', '#f0c75e'][seat] ?? '#ffffff';
     this.state.snakes.set(String(seat), snake);
   }
 
   private maybeStart() {
     const humans = this.seatOf.size;
-    if (this.mode === 'bot' ? humans >= 1 : humans >= 2) this.startCountdown();
+    if (this.mode === 'bot' ? humans >= 1 : humans >= MIN_PLAYERS_TO_START) this.startCountdown();
   }
 
   private startCountdown() {
@@ -135,6 +153,11 @@ export class MatchRoom extends Room<MatchState> {
       if (this.countdownLeft <= 0) {
         if (this.countdownTimer) clearInterval(this.countdownTimer);
         this.countdownTimer = null;
+        if (this.mode === 'pvp' && this.seatOf.size < MIN_PLAYERS_TO_START) {
+          this.state.status = 'lobby';
+          this.state.countdown = 0;
+          return;
+        }
         this.startPlaying();
       }
     }, 1000);
@@ -142,10 +165,11 @@ export class MatchRoom extends Room<MatchState> {
 
   private startPlaying() {
     this.state.status = 'playing';
-    this.sim = createRun(this.seed, this.mode === 'pvp' ? 'pvp' : 'bot', SIM_VERSION);
+    this.playerCount = this.mode === 'pvp' ? Math.min(this.maxSeats, this.seatOf.size) : 2;
+    this.sim = createRun(this.seed, this.mode === 'pvp' ? 'pvp' : 'bot', SIM_VERSION, this.playerCount);
     this.inputLog = [];
-    this.pending = [null, null];
-    this.last = [DEFAULT_INPUT, DEFAULT_INPUT];
+    this.pending = Array.from({ length: this.playerCount }, () => null);
+    this.last = Array.from({ length: this.playerCount }, () => DEFAULT_INPUT);
     this.syncState();
     this.tickTimer = setInterval(() => this.tick(), TICK_MS);
   }
@@ -153,7 +177,7 @@ export class MatchRoom extends Room<MatchState> {
   private tick() {
     if (!this.sim || this.state.status !== 'playing') return;
     const inputs: AppliedInput[] = [];
-    for (let seat = 0; seat < SEAT_COUNT; seat++) {
+    for (let seat = 0; seat < this.playerCount; seat++) {
       const snake = this.sim.snakes[seat];
       if (!snake) {
         inputs.push(DEFAULT_INPUT);
@@ -217,8 +241,8 @@ export class MatchRoom extends Room<MatchState> {
     this.state.seed = this.seed;
     this.sim = null;
     this.inputLog = [];
-    this.pending = [null, null];
-    this.last = [DEFAULT_INPUT, DEFAULT_INPUT];
+    this.pending = Array.from({ length: this.playerCount || SEAT_COUNT }, () => null);
+    this.last = Array.from({ length: this.playerCount || SEAT_COUNT }, () => DEFAULT_INPUT);
     this.state.status = 'lobby';
     this.state.resultJson = '';
     this.state.tick = 0;

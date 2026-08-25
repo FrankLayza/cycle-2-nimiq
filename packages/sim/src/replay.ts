@@ -18,6 +18,14 @@ function resolveInput(log: AppliedInput[], tick: number): AppliedInput {
   return DEFAULT_INPUT;
 }
 
+function resolvePvpInput(log: AppliedInput[][], tick: number, seat: number): AppliedInput {
+  for (let t = tick - 1; t >= 0; t--) {
+    const applied = log[t]?.[seat];
+    if (applied) return applied;
+  }
+  return DEFAULT_INPUT;
+}
+
 /**
  * Replay a full match from (seed, version, inputs) and reproduce the result
  * deterministically. Bot seats regenerate their own inputs via the seeded bot
@@ -27,14 +35,21 @@ export function replay(seed: number, version: number, inputs: AppliedInput[][], 
   if (version !== SIM_VERSION) {
     throw new Error(`SIM_VERSION mismatch: got ${version}, expected ${SIM_VERSION}`);
   }
-  let state = createRun(seed, mode, version);
+  const playerCount = mode === 'pvp'
+    ? Math.max(2, Math.min(4, inputs[0]?.length || 4))
+    : undefined;
+  let state = createRun(seed, mode, version, playerCount);
   const seatCount = state.snakes.length;
   const log: AppliedInput[][] = [];
   while (!isTerminal(state)) {
     const applied: AppliedInput[] = [];
     for (let seat = 0; seat < seatCount; seat++) {
       const seatLog = inputs[seat] ?? [];
-      const a = mode === 'bot' && seat === 1 ? botPolicy(state, seat) : resolveInput(seatLog, state.tick + 1);
+      const a = mode === 'bot' && seat === 1
+        ? botPolicy(state, seat)
+        : mode === 'pvp'
+          ? resolvePvpInput(inputs, state.tick + 1, seat)
+          : resolveInput(seatLog, state.tick + 1);
       applied.push(a);
     }
     log.push(applied);

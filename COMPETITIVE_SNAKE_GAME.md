@@ -63,7 +63,7 @@
 
 - **Room access:** 4-character room codes (e.g. `7X9K`) inside the lobby; web URL fallback `/?room=7X9K`.
 - **Cold start:** if no opponent joins public matchmaking within 5 seconds, an **AI bot** fills the slot.
-- **Late arrivals:** full 1v1 rooms enter **Spectator Mode**.
+- **Late arrivals:** no connection joins as a spectator. PvP supports 2–4 active seats; a player who dies remains connected and can watch the surviving players until the match ends.
 - **Anti-sybil:** private/custom room results excluded from public leaderboards; leaderboards restricted to public, randomized matchmaking.
 
 ---
@@ -166,6 +166,7 @@
 | D41 | **Fresh Rink interaction polish:** retain the warm, friendly lawn identity while increasing ink/muted contrast and standardizing primary coral buttons on restrained lift/press motion. Coral remains the primary action color; lemon is reserved for boost/reward emphasis; reduced-motion fallbacks remain mandatory. | ✅ Approved |
 | D42 | **PvP room joins must be StrictMode-safe:** defer the client Colyseus join until the mount survives React's development effect probe, preventing one creator from opening two seats and auto-starting their own room. | ✅ Done |
 | D43 | **UI polish pass:** preserve the render-only Phaser boundary while upgrading the responsive Lawn League landing page, unifying PvP/Today's Run match framing and mobile control docks, adding restrained 2.5D lawn depth/contact shadows, and strengthening pickup, boost, and shrink feedback. No sim, room, wallet, or reward behavior changes. | ✅ Done |
+| D44 | **PvP capacity:** matches support 2–4 active players. Lobby/countdown joins fill available seats; no connection joins as a spectator. A player who dies remains connected and observes the surviving players until the match ends. | ✅ Done |
 
 ---
 
@@ -343,7 +344,7 @@ Full blueprint: `architecture/ARCHITECTURE.md` — the W1 scaffold spec.
 
 - **Monorepo:** `packages/sim` (pure deterministic sim, zero deps) · `packages/server` (Fastify + Colyseus + SQLite/WAL) · `packages/client` (Vite + React + Phaser).
 - **Sim module (the heart):** tick-indexed + integer-only + seeded RNG (context-separated) · arena pre-derived from seed · `SIM_VERSION` gate · golden-hash tests (D31). Public API: `createRun` / `step` / `replay` / `getArena`.
-- **Colyseus `match` room:** 2 seats + spectators · 110ms authoritative tick · input log = per-tick applied inputs (D27) · bots only in free-play (D5) · 4-char Crockford codes · rematch without stakes.
+- **Colyseus `match` room:** 2–4 active seats; dead players remain as observers and late spectator joins are rejected · 110ms authoritative tick · input log = per-tick applied inputs (D27) · bots only in free-play (D5) · 4-char Crockford codes · rematch without stakes.
 - **REST `/api/v1`:** health · run/today · runs/verify (replay + attestation) · daily/weekly leaderboards · streaks · rewards/schedule (published rules) · payouts/:runId · rooms · admin payouts/stats.
 - **Today's Run loop (D15/D28/D34):** fetch seed → solo run locally → sign attestation → verify → leaderboard + rank → 23:55 UTC payout job pays top-3 from our pool (D17/D32).
 - **DB:** wallets, runs (`UNIQUE(day, log_hash)`), leaderboard, payouts (idempotent), rooms.

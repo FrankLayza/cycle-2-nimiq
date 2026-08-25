@@ -11,7 +11,6 @@ export function botPolicy(state: GameState, seat: number): AppliedInput {
   const rng = rngFor(state.seed, state.tick, RngContext.Bot);
   const me = state.snakes[seat];
   if (!me || !me.alive) return { turn: null, boost: false };
-  const opp = state.snakes[1 - seat];
   const head = me.cells[0];
 
   // Nearest pellet target (Manhattan distance).
@@ -54,9 +53,10 @@ export function botPolicy(state: GameState, seat: number): AppliedInput {
       if (myBody.has(nx + ',' + ny)) sc -= 80;
       if (oppBody.has(nx + ',' + ny)) sc -= 90;
       if (target) sc -= (Math.abs(nx - target.x) + Math.abs(ny - target.y)) * 1.2;
-      if (opp && opp.alive) {
-        const od = Math.abs(nx - opp.cells[0].x) + Math.abs(ny - opp.cells[0].y);
-        if (od <= 2) sc -= 6; // slight caution near the opponent's head zone
+      for (const opponent of state.snakes) {
+        if (!opponent.alive || opponent.id === me.id) continue;
+        const od = Math.abs(nx - opponent.cells[0].x) + Math.abs(ny - opponent.cells[0].y);
+        if (od <= 2) sc -= 6; // slight caution near any opponent head zone
       }
     }
     if (sc > bestScore) {

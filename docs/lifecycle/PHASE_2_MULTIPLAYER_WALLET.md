@@ -18,7 +18,7 @@
 
 ### Task 2.2 — Client-Side Room-Code PvP Networking (`packages/client` & `packages/server`)
 - [~] `joinOrCreate('match', { mode: 'pvp', code, wallet })` and live input sending are wired; complete room lifecycle/error handling remains.
-- [x] Lobby can create a supported 1v1 room via REST, display/join its generated 4-character code, enter a code manually, and read `/?room=CODE`.
+- [x] Lobby can create a supported 2–4 player room via REST, display/join its generated 4-character code, enter a code manually, and read `/?room=CODE`.
 - [~] Client schema mirror exists and inputs stream; consume authoritative state updates in Phaser.
 - [ ] Implement tick interpolation in Phaser to smoothly render remote snake movements.
 
@@ -48,7 +48,7 @@
 
 ## 2. Acceptance Criteria for Phase 2
 
-- [ ] End-to-end 1v1 PvP match playable between two real devices via 4-character room codes.
+- [ ] End-to-end 2–4 player PvP match playable between real devices via 4-character room codes.
 - [ ] Real Nimiq wallet address detected automatically and bound to player profile.
 - [ ] Today's Run can be played, signed with the Nimiq wallet, submitted, and verified by the server.
 - [ ] UI and Phaser canvas adhere to the "Lawn League" aesthetic at a steady 60 FPS on mobile.

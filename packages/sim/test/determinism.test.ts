@@ -32,13 +32,40 @@ describe('determinism (D31)', () => {
 
   it('PvP opening lanes remain visible before an idle collision', () => {
     let state = createRun(12345, 'pvp');
+    expect(state.snakes).toHaveLength(4);
     for (let tick = 0; tick < 20; tick++) {
       expect(state.snakes.every((snake) => snake.alive)).toBe(true);
       state = step(state, [
         { turn: null, boost: false },
         { turn: null, boost: false },
+        { turn: null, boost: false },
+        { turn: null, boost: false },
       ]);
     }
+  });
+
+  it('replays the authoritative tick-major input log for four PvP seats', () => {
+    const noop = { turn: null, boost: false } as const;
+    const result = replay(12345, SIM_VERSION, [ [noop, noop, noop, noop] ], 'pvp');
+    expect(result.snakes).toHaveLength(4);
+    expect(result.inputLog[0]).toEqual([noop, noop, noop, noop]);
+  });
+
+  it('resolves a three-way equal-length head-on without iteration-order survivors', () => {
+    const state = createRun(12345, 'pvp', SIM_VERSION, 3);
+    state.pellets = [];
+    state.normalIdx = 399;
+    state.bountyIdx = 399;
+    for (let seat = 0; seat < 3; seat++) {
+      state.snakes[seat] = {
+        ...state.snakes[seat],
+        cells: [{ x: 15, y: 15 }, { x: 14 - seat, y: 15 }, { x: 13 - seat, y: 15 }],
+        dir: { x: 0, y: 0 },
+        lastTurnTick: seat,
+      };
+    }
+    const next = step(state, Array.from({ length: 3 }, () => ({ turn: null, boost: false })));
+    expect(next.snakes.map((snake) => snake.alive)).toEqual([true, false, false]);
   });
 
   it('recorded inputs drive the outcome (replay differs without the log)', () => {
