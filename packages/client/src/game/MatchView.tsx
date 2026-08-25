@@ -5,9 +5,8 @@ import type { Room } from 'colyseus.js';
 import { MatchScene } from './MatchScene';
 import { createMatchGame } from './createMatchGame';
 import { snapshotFromGame, snapshotFromRoom } from './renderState';
-import { swipeToDir } from './input';
 import { useKeyboardControls } from './useKeyboard';
-import { GameControls } from '../components/GameControls';
+import { useTouchControls } from './useTouchControls';
 import { createMatchClient, joinPvp } from '../net/client';
 import type { ClientMatchState } from '../net/client';
 
@@ -195,31 +194,10 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
       }
     }, TICK_MS);
 
-    const canvas = host.querySelector('canvas');
-    let start: { x: number; y: number } | null = null;
-    const onDown = (event: PointerEvent) => {
-      start = { x: event.clientX, y: event.clientY };
-    };
-    const onUp = (event: PointerEvent) => {
-      if (!start) return;
-      const dx = event.clientX - start.x;
-      const dy = event.clientY - start.y;
-      if (Math.abs(dx) + Math.abs(dy) > 24) {
-        const dir = swipeToDir(dx, dy);
-        pendingRef.current = { ...pendingRef.current, turn: dir };
-        setHasTurned(true);
-      }
-      start = null;
-    };
-    canvas?.addEventListener('pointerdown', onDown);
-    canvas?.addEventListener('pointerup', onUp);
-
     return () => {
       disposed = true;
       clearInterval(interval);
       if (connectTimer) clearTimeout(connectTimer);
-      canvas?.removeEventListener('pointerdown', onDown);
-      canvas?.removeEventListener('pointerup', onUp);
       void roomRef.current?.leave();
       roomRef.current = null;
       dispose();
@@ -234,6 +212,11 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
     pendingRef.current = { ...pendingRef.current, boost };
   };
   useKeyboardControls(phase === 'playing', setTurn, setBoost);
+  const touch = useTouchControls({
+    enabled: phase === 'playing',
+    onTurn: setTurn,
+    onBoostChange: setBoost,
+  });
   const handleRematch = () => {
     if (mode === 'pvp' && roomRef.current) {
       setResult(null);
@@ -269,10 +252,20 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
     }
   };
 
-  const controlsEnabled = phase === 'playing';
   const elapsedSeconds = Math.floor((hud.tick * TICK_MS) / 1000);
   const matchClock = `${Math.floor(elapsedSeconds / 60)}:${String(elapsedSeconds % 60).padStart(2, '0')}`;
   const shrinkCountdown = Math.max(0, 10 - (elapsedSeconds % 10));
+  /**
+   * Control hints. Both fade out once the player first steers, since there is no
+   * longer an on-screen d-pad implying how to play. The touch hint also doubles
+   * as the boost indicator, because boosting burns tail segments and the player
+   * should know it is active.
+   */
+  const touchHint = hud.boosting
+    ? 'Boosting · tail burning'
+    : hasTurned
+      ? null
+      : 'Swipe to steer · hold the right side to boost';
   const phaseMessage =
     phase === 'connecting'
       ? 'Connecting to room...'
@@ -288,15 +281,17 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
   const isTied = hud.you === hud.rival;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-cream">
-      <div
-        id="world"
-        className="match-shell relative h-full w-full overflow-hidden bg-[#0b0e14] landscape:aspect-video landscape:h-auto landscape:w-[min(100vw,calc(100vh*16/9))] landscape:rounded-2xl shadow-2xl"
-      >
-        <div ref={hostRef} className="h-full w-full" />
+    <div className="match-shell fixed inset-0 overflow-hidden bg-ink-deep" {...touch}>
+      {/* The canvas fills the whole stage; MatchScene centres the square field
+          inside it, so the field is as large as the viewport allows. */}
+      <div ref={hostRef} className="absolute inset-0" />
 
-        <div className="match-hud pointer-events-none absolute left-3 right-3 top-3 sm:top-4 mx-auto max-w-2xl flex items-center justify-between gap-2 sm:gap-3 z-10">
-          <div className="hud-card-2d min-w-20 sm:min-w-24 rounded-2xl p-2 sm:p-2.5 text-left shadow-md">
+      {/* The HUD overlays absolutely and never reflows the game area (D11). This
+          overlay mirrors the canvas's own centring, so the rails land exactly on
+          the margins either side of the square field. */}
+      <div className="match-overlay">
+        <aside className="match-rail">
+          <div className="hud-card-2d rounded-2xl p-2 sm:p-2.5 text-left shadow-md">
             <div className="flex items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded-full bg-coral shadow-[0_0_8px_#ff686b]" />
               <span className="text-[10px] font-black uppercase tracking-wider text-coral-dark">You</span>
@@ -311,26 +306,19 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
             </b>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="hud-card-dark rounded-2xl px-3.5 py-1.5 sm:px-5 sm:py-2 text-center text-white shadow-md">
-              <span className="block text-base sm:text-lg font-black leading-tight tabular-nums tracking-wide">{matchClock}</span>
-              <span className={`block text-[9px] font-black uppercase tracking-wider ${shrinkCountdown <= 3 ? 'text-lemon animate-pulse' : 'text-coral-soft'}`}>
-                Shrink {String(shrinkCountdown).padStart(2, '0')}s
-              </span>
-            </div>
-
-            {!result && (
-              <button
-                type="button"
-                className="btn-3d btn-3d-white pointer-events-auto rounded-xl px-2.5 py-1.5 sm:px-3 sm:py-2 text-[10px] font-black uppercase tracking-wider shadow-sm"
-                onClick={onExit}
-              >
-                Exit
-              </button>
-            )}
+          <div className="hud-card-dark rounded-2xl px-3 py-1.5 text-center text-white shadow-md">
+            <span className="block text-base sm:text-lg font-black leading-tight tabular-nums tracking-wide">{matchClock}</span>
+            <span className={`block text-[9px] font-black uppercase tracking-wider ${shrinkCountdown <= 3 ? 'text-lemon animate-pulse' : 'text-coral-soft'}`}>
+              Shrink {String(shrinkCountdown).padStart(2, '0')}s
+            </span>
           </div>
+        </aside>
 
-          <div className="hud-card-2d min-w-20 sm:min-w-24 rounded-2xl p-2 sm:p-2.5 text-right shadow-md">
+        {/* Matches the square field, reserving the rails' width. Never painted. */}
+        <div className="match-frame" />
+
+        <aside className="match-rail items-end">
+          <div className="hud-card-2d rounded-2xl p-2 sm:p-2.5 text-right shadow-md">
             <div className="flex items-center justify-end gap-1.5">
               {!isLeading && !isTied && (
                 <span className="mr-auto rounded-full bg-teal px-1.5 py-0.2 text-[8px] font-black text-ink">
@@ -344,7 +332,18 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
               {hud.rival.toLocaleString()}
             </b>
           </div>
-        </div>
+
+          {!result && (
+            <button
+              type="button"
+              className="btn-3d btn-3d-white pointer-events-auto rounded-xl px-2.5 py-1.5 text-[10px] font-black uppercase tracking-wider shadow-xs"
+              onClick={onExit}
+            >
+              Exit
+            </button>
+          )}
+        </aside>
+      </div>
 
         {phaseMessage && (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-ink/35 backdrop-blur-xs z-20">
@@ -370,30 +369,24 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
           </div>
         )}
 
-        {/* Desktop Controls Helper - Centered between D-Pad and Boost */}
-        <div className="pointer-events-none hidden md:flex absolute bottom-5 left-1/2 -translate-x-1/2 items-center gap-2 rounded-xl bg-ink/80 px-3.5 py-1.5 text-[11px] font-bold text-white shadow-md backdrop-blur-xs z-10">
-          <span className="rounded bg-white/20 px-1.5 py-0.5 font-mono text-[10px]">WASD / ARROWS</span>
-          <span>Turn</span>
-          <span className="text-white/40">·</span>
-          <span className="rounded bg-white/20 px-1.5 py-0.5 font-mono text-[10px]">SPACE</span>
-          <span>Boost</span>
-        </div>
+        {/* Control hints only — the d-pad and boost button are gone. Desktop plays
+            on the keyboard; touch plays by swiping to steer and holding the right
+            half to boost. */}
+        {!hasTurned && (
+          <div className="match-hint pointer-events-none absolute bottom-4 left-1/2 z-10 hidden -translate-x-1/2 items-center gap-2 whitespace-nowrap rounded-xl bg-ink/80 px-3.5 py-1.5 text-[11px] font-bold text-white shadow-md backdrop-blur-xs md:flex">
+            <span className="rounded-sm bg-white/20 px-1.5 py-0.5 font-mono text-[10px]">WASD / ARROWS</span>
+            <span>Turn</span>
+            <span className="text-white/40">·</span>
+            <span className="rounded-sm bg-white/20 px-1.5 py-0.5 font-mono text-[10px]">SPACE</span>
+            <span>Boost</span>
+          </div>
+        )}
 
-        <div className="mobile-control-dock match-controls absolute bottom-4 left-4 right-4 flex items-end justify-between gap-3">
-          {!hasTurned && (
-            <div className="match-hint pointer-events-none absolute bottom-[calc(100%+14px)] left-1/2 -translate-x-1/2 whitespace-nowrap rounded-xl border border-white/80 bg-white/95 px-4 py-2 text-xs font-black text-ink shadow-md backdrop-blur-xs">
-              {hud.boosting ? '🔥 Boosting · Tail burning' : '👉 Swipe, tap D-Pad, or use arrow keys'}
-            </div>
-          )}
-          <GameControls
-            variant="light"
-            disabled={!controlsEnabled}
-            boosting={hud.boosting}
-            onTurn={setTurn}
-            onBoostChange={setBoost}
-          />
-        </div>
-      </div>
+        {touchHint && (
+          <div className="match-hint pointer-events-none absolute bottom-4 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-xl bg-ink/80 px-3.5 py-1.5 text-[11px] font-bold text-white shadow-md backdrop-blur-xs md:hidden">
+            {touchHint}
+          </div>
+        )}
 
       {result && (
         <div className="result-backdrop fixed inset-0 z-20 grid place-items-center bg-ink/65 p-5 text-center backdrop-blur-xs">

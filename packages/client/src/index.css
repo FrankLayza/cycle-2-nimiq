@@ -68,6 +68,77 @@
   flex: 1 1 auto;
 }
 
+/* Landscape stage.
+   On a coarse-pointer device held in portrait, the shell is laid out at swapped
+   dimensions and rotated so the app presents as landscape. `swipeToDir` already
+   carries the matching inverse mapping. Sizing comes from inline styles in
+   LandscapeStage because vh/vw are unreliable while mobile browser chrome
+   shows and hides. */
+.landscape-stage {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+.landscape-stage-rotated {
+  inset: auto;
+  top: 0;
+  left: 0;
+  transform: rotate(90deg) translateY(-100%);
+  transform-origin: top left;
+}
+
+/* Match overlay rails.
+   The canvas fills the whole stage and centres a square field inside itself, so
+   in landscape there is a margin either side. This overlay mirrors that centring
+   with flexbox, which puts the rails exactly over those margins. It is absolutely
+   positioned and pointer-events-none, so the HUD never reflows the game area
+   (D11) — the rails are layout for the overlay only, not for the canvas. */
+.match-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: stretch;
+  pointer-events: none;
+}
+
+.match-frame {
+  position: relative;
+  flex: 0 0 auto;
+  aspect-ratio: 1;
+  height: 100%;
+  width: auto;
+}
+
+.match-rail {
+  display: flex;
+  flex: 1 1 0;
+  min-width: 0;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: clamp(0.5rem, 1.4vh, 1rem);
+  gap: 0.5rem;
+}
+
+/* Portrait (desktop narrow windows — touch devices are rotated instead): the
+   field fills the width, so the side rails collapse and the HUD stacks over it. */
+@media (orientation: portrait) {
+  .match-overlay {
+    flex-direction: column;
+  }
+  .match-frame {
+    height: auto;
+    width: 100%;
+    margin: auto 0;
+  }
+  .match-rail {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+}
+
 /* Phaser canvas container.
    The canvas backing store is sized in DEVICE pixels by `createMatchGame`, so it
    must be pinned to its host box here or it would overflow by the pixel ratio.
@@ -106,8 +177,7 @@
   mix-blend-mode: multiply;
 }
 
-.match-shell > .match-hud,
-.match-shell > .match-controls {
+.match-shell > .match-overlay {
   z-index: 2;
 }
 
@@ -124,19 +194,6 @@
   .match-shell {
     padding-top: env(safe-area-inset-top);
     padding-bottom: env(safe-area-inset-bottom);
-  }
-  .match-hud {
-    top: max(0.75rem, env(safe-area-inset-top));
-  }
-  .match-controls {
-    bottom: max(0.75rem, env(safe-area-inset-bottom));
-  }
-  .match-hud > div {
-    min-width: 4.5rem;
-    padding: 0.5rem 0.75rem;
-  }
-  .match-hud b {
-    font-size: 1.25rem;
   }
 }
 
@@ -234,62 +291,6 @@
 .btn-3d-white:active:not(:disabled) {
   box-shadow: 0 1px 0 #cfccc2;
   transform: translateY(3px);
-}
-
-/* 2.5D D-Pad and Boost Controls */
-.game-pad {
-  box-shadow: 0 12px 28px rgb(11 14 20 / 25%), inset 0 1px 0 rgb(255 255 255 / 40%);
-}
-
-.dpad-key {
-  position: relative;
-  display: grid;
-  place-items: center;
-  transition: transform 100ms var(--ease-out), box-shadow 100ms var(--ease-out), background-color 100ms ease;
-  box-shadow: 0 4px 0 #cfccc2, 0 6px 12px rgb(0 0 0 / 8%);
-}
-
-.dpad-key:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 5px 0 #cfccc2, 0 8px 14px rgb(0 0 0 / 12%);
-}
-
-.dpad-key:active:not(:disabled) {
-  transform: translateY(3px);
-  box-shadow: 0 1px 0 #cfccc2, 0 2px 4px rgb(0 0 0 / 6%);
-}
-
-.dpad-key-dark {
-  box-shadow: 0 4px 0 #0d1522, 0 6px 12px rgb(0 0 0 / 25%);
-}
-
-.dpad-key-dark:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 5px 0 #0d1522, 0 8px 14px rgb(0 0 0 / 30%);
-}
-
-.dpad-key-dark:active:not(:disabled) {
-  transform: translateY(3px);
-  box-shadow: 0 1px 0 #0d1522, 0 2px 4px rgb(0 0 0 / 20%);
-}
-
-.boost-button {
-  letter-spacing: 0.04em;
-  background: radial-gradient(circle at 35% 25%, #fff280 0%, var(--color-lemon) 60%, #e2c61f 100%);
-  box-shadow: 0 6px 0 var(--color-lemon-dark), 0 14px 28px rgb(214 190 40 / 35%);
-  border-top: 2px solid rgb(255 255 255 / 80%);
-}
-
-.boost-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 0 var(--color-lemon-dark), 0 16px 32px rgb(214 190 40 / 40%);
-}
-
-.boost-button:active:not(:disabled),
-.boost-button.is-boosting {
-  transform: translateY(4px);
-  box-shadow: 0 2px 0 var(--color-lemon-dark), 0 6px 14px rgb(214 190 40 / 30%);
-  background: radial-gradient(circle at 50% 40%, #fff8a6 0%, #f7e04d 50%, #cca910 100%);
 }
 
 /* In-game HUD glass cards */
@@ -495,7 +496,6 @@
 /* Animations */
 .score-pop { animation: score-pop 220ms var(--ease-pop); }
 .match-clock { animation: clock-breathe 2.4s var(--ease-in-out) infinite; }
-.boost-button.is-boosting { animation: boost-pulse 520ms ease-in-out infinite alternate; }
 .match-hint { animation: hint-fade 3.2s ease both; }
 
 @keyframes score-pop {
@@ -506,11 +506,6 @@
 @keyframes clock-breathe {
   0%, 100% { box-shadow: 0 4px 12px rgb(0 0 0 / 20%); }
   50% { box-shadow: 0 6px 20px rgb(0 0 0 / 30%); }
-}
-
-@keyframes boost-pulse {
-  from { transform: translateY(0) scale(1); }
-  to { transform: translateY(-3px) scale(1.04); }
 }
 
 @keyframes hint-fade {
@@ -569,50 +564,6 @@
   to { transform: rotate(6deg) scaleX(1.1); border-radius: 55% 999px 999px 55%; }
 }
 
-.mobile-control-dock {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.75rem;
-  border: 1.5px solid rgb(255 255 255 / 25%);
-  border-radius: 1.75rem;
-  background: linear-gradient(180deg, rgb(23 34 53 / 65%) 0%, rgb(17 26 41 / 80%) 100%);
-  box-shadow: 0 16px 36px rgb(11 14 20 / 30%), inset 0 1px 0 rgb(255 255 255 / 20%);
-  backdrop-filter: blur(12px);
-}
-
-.mobile-control-dock::before {
-  position: absolute;
-  top: -0.65rem;
-  left: 50%;
-  padding: 0.25rem 0.65rem;
-  border: 1px solid rgb(255 255 255 / 20%);
-  border-radius: 999px;
-  background: rgb(23 34 53 / 90%);
-  color: rgb(255 255 255 / 85%);
-  content: 'SWIPE OR USE D-PAD';
-  font-size: 0.58rem;
-  font-weight: 900;
-  letter-spacing: 0.14em;
-  transform: translateX(-50%);
-  box-shadow: 0 4px 10px rgb(0 0 0 / 20%);
-}
-
-@media (min-width: 768px) {
-  .mobile-control-dock {
-    padding: 0;
-    border-color: transparent;
-    background: transparent;
-    box-shadow: none;
-    backdrop-filter: none;
-  }
-
-  .mobile-control-dock::before {
-    display: none;
-  }
-}
-
 /* Accessibility */
 :focus-visible {
   outline: 3px solid var(--color-lemon);
@@ -638,7 +589,6 @@
   .result-detail,
   .score-pop,
   .match-clock,
-  .boost-button.is-boosting,
   .match-hint,
   .floating-pickup-3d,
   .lobby-sun-glow {

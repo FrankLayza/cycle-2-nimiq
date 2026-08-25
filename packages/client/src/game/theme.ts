@@ -194,8 +194,16 @@ export function specularOffset(cellPx: number): Offset {
  * values instead of six unrelated literals.
  */
 export const FIELD = {
-  /** Camera background — the area outside the square pitch. */
-  backdrop: mixHex(PALETTE.grassSoft, PALETTE.grass, 0.18),
+  /**
+   * Camera background — the area outside the square pitch.
+   *
+   * The arena is a fixed 30x30 square that must stay wholly visible, so in
+   * landscape it fills the height and leaves a margin either side. This was a
+   * pale green that read as dead space; a dark surround instead reads as an
+   * intentional stadium and lets the lit turf carry the eye. The match HUD rails
+   * sit over these margins.
+   */
+  backdrop: mixHex(PALETTE.inkDeep, PALETTE.grassDeep, 0.18),
   /** Drop shadow under the whole stadium. */
   shadow: mixHex(PALETTE.grassDeep, PALETTE.inkDeep, 0.55),
   /** Outer bevel rim. */

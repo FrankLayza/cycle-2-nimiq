@@ -7,7 +7,7 @@ import { createMatchGame } from '../game/createMatchGame';
 import type { ResponsiveGame } from '../game/createMatchGame';
 import { snapshotFromGame } from '../game/renderState';
 import { useKeyboardControls } from '../game/useKeyboard';
-import { GameControls } from '../components/GameControls';
+import { useTouchControls } from '../game/useTouchControls';
 
 interface Props {
   wallet: { address: string } | null;
@@ -36,7 +36,6 @@ export function TodayRunView({ wallet, onExit }: Props) {
   const [personal, setPersonal] = useState<{ rank: number; score: number } | null>(null);
   const inputs = useRef<AppliedInput[]>([]);
   const pending = useRef<AppliedInput>({ turn: null, boost: false });
-  const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const runId = useRef(crypto.randomUUID());
   const fieldHost = useRef<HTMLDivElement | null>(null);
   const phaserGame = useRef<ResponsiveGame | null>(null);
@@ -172,15 +171,15 @@ export function TodayRunView({ wallet, onExit }: Props) {
     pending.current = { ...pending.current, boost: value };
   };
   useKeyboardControls(phase === 'playing', turn, boost);
-  const finishSwipe = (x: number, y: number) => {
-    const start = swipeStart.current;
-    swipeStart.current = null;
-    if (!start) return;
-    const dx = x - start.x;
-    const dy = y - start.y;
-    if (Math.abs(dx) + Math.abs(dy) < 24) return;
-    turn(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up'));
-  };
+  // Swipe to steer, hold the right half to boost. This also replaces a local
+  // swipe handler that mapped deltas without any rotation compensation, which
+  // steered the wrong way whenever the shell presented landscape on a portrait
+  // device.
+  const touch = useTouchControls({
+    enabled: phase === 'playing',
+    onTurn: turn,
+    onBoostChange: boost,
+  });
   const snake = state?.snakes[0];
   const terminal = Boolean(state && isTerminal(state));
 
@@ -210,41 +209,29 @@ export function TodayRunView({ wallet, onExit }: Props) {
           {/* Arena Field */}
           <section
             className="daily-field relative z-10 min-h-0 flex-1 overflow-hidden rounded-3xl border-4 border-white/30 bg-grass shadow-2xl"
-            onPointerDown={(event) => {
-              swipeStart.current = { x: event.clientX, y: event.clientY };
-            }}
-            onPointerUp={(event) => finishSwipe(event.clientX, event.clientY)}
-            onPointerCancel={() => {
-              swipeStart.current = null;
-            }}
+            {...touch}
           >
-            <div ref={fieldHost} id="world" className="h-full w-full" />
+            <div ref={fieldHost} className="h-full w-full" />
             {!terminal && (
               <div className="run-hint pointer-events-none absolute left-1/2 top-4 -translate-x-1/2 rounded-full bg-white/95 border border-line px-4 py-1.5 text-xs font-black text-ink shadow-md">
-                👉 Swipe or use the D-Pad
+                Swipe to steer · hold the right side to boost
               </div>
             )}
           </section>
 
-          {/* Controls Dock */}
-          <div className="mobile-control-dock relative z-10 flex shrink-0 items-end justify-between gap-4 pb-[max(0px,env(safe-area-inset-bottom))]">
-            <GameControls
-              variant="dark"
-              onTurn={turn}
-              onBoostChange={boost}
-              trailing={
-                terminal ? (
-                  <button
-                    type="button"
-                    className="btn-3d btn-3d-lemon min-h-16 flex-1 rounded-2xl text-base sm:text-lg font-black tracking-wide"
-                    onClick={() => void finish()}
-                  >
-                    VERIFY MY SCORE 🚀
-                  </button>
-                ) : undefined
-              }
-            />
-          </div>
+          {/* Verify CTA — the d-pad and boost button are gone; play is swipe + hold
+              on touch and WASD/arrows + space on a keyboard. */}
+          {terminal && (
+            <div className="relative z-10 flex shrink-0 items-end pb-[max(0px,env(safe-area-inset-bottom))]">
+              <button
+                type="button"
+                className="btn-3d btn-3d-lemon min-h-16 w-full rounded-2xl text-base sm:text-lg font-black tracking-wide"
+                onClick={() => void finish()}
+              >
+                VERIFY MY SCORE
+              </button>
+            </div>
+          )}
         </div>
       </main>
     );
