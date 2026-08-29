@@ -4,6 +4,7 @@ import type { AppliedInput, Dir, GameState } from '@snake/sim';
 import type { Room } from 'colyseus.js';
 import { MatchScene } from './MatchScene';
 import { createMatchGame } from './createMatchGame';
+import { formatMatchClock, isStillShrinking, shrinkSecondsRemaining } from './matchHud';
 import { snapshotFromGame, snapshotFromRoom } from './renderState';
 import { useKeyboardControls } from './useKeyboard';
 import { useTouchControls } from './useTouchControls';
@@ -252,9 +253,9 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
     }
   };
 
-  const elapsedSeconds = Math.floor((hud.tick * TICK_MS) / 1000);
-  const matchClock = `${Math.floor(elapsedSeconds / 60)}:${String(elapsedSeconds % 60).padStart(2, '0')}`;
-  const shrinkCountdown = Math.max(0, 10 - (elapsedSeconds % 10));
+  const matchClock = formatMatchClock(hud.tick);
+  const shrinkCountdown = shrinkSecondsRemaining(hud.tick);
+  const stillShrinking = isStillShrinking(hud.boundary);
   /**
    * Control hints. Both fade out once the player first steers, since there is no
    * longer an on-screen d-pad implying how to play. The touch hint also doubles
@@ -308,9 +309,15 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
 
           <div className="hud-card-dark rounded-2xl px-3 py-1.5 text-center text-white shadow-md">
             <span className="block text-base sm:text-lg font-black leading-tight tabular-nums tracking-wide">{matchClock}</span>
-            <span className={`block text-[9px] font-black uppercase tracking-wider ${shrinkCountdown <= 3 ? 'text-lemon animate-pulse' : 'text-coral-soft'}`}>
-              Shrink {String(shrinkCountdown).padStart(2, '0')}s
-            </span>
+            {stillShrinking ? (
+              <span className={`block text-[9px] font-black uppercase tracking-wider ${shrinkCountdown <= 3 ? 'text-lemon animate-pulse' : 'text-coral-soft'}`}>
+                Shrink {String(shrinkCountdown).padStart(2, '0')}s
+              </span>
+            ) : (
+              <span className="block text-[9px] font-black uppercase tracking-wider text-coral-soft">
+                Final size
+              </span>
+            )}
           </div>
         </aside>
 

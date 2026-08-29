@@ -39,7 +39,6 @@ export class MatchScene extends Phaser.Scene {
   private current: RenderSnapshot | null = null;
   private currentReceivedAt = 0;
   private decoratedSeed: number | null = null;
-  private previousPellets = new Set<string>();
   private particles: ParticleFX[] = [];
   private scorePopups: FloatingPopup[] = [];
   private previousBounds: RenderSnapshot['bounds'] | null = null;
@@ -103,7 +102,85 @@ export class MatchScene extends Phaser.Scene {
     this.previous = this.current;
     this.current = snapshot;
     this.currentReceivedAt = timestamp;
+    if (this.previous) this.spawnPelletFx(this.previous, snapshot, timestamp);
     if (this.decoratedSeed !== snapshot.seed) this.drawField(snapshot.seed);
+  }
+
+  /**
+   * Spawn pickup FX by diffing two consecutive authoritative snapshots.
+   *
+   * This runs once per tick against raw integer cells, rather than every frame
+   * against interpolated ones, and it distinguishes a pellet that was *eaten*
+   * from one that merely expired. The sim drops a bounty once it passes
+   * `BOUNTY_MAX_AGE`, and the previous frame-based diff treated any disappearance
+   * as a pickup — so an uneaten bounty timing out threw a "+3" celebration that
+   * nobody had scored.
+   *
+   * A pellet was eaten exactly when a snake head occupies its cell on the next
+   * tick, because `step()` awards pellets at the head's final position.
+   */
+  private spawnPelletFx(previous: RenderSnapshot, next: RenderSnapshot, time: number) {
+    if (previous.pellets.length === 0) return;
+    const survived = new Set(next.pellets.map((p) => `${p.x}:${p.y}:${p.type}`));
+    const heads = new Set(
+      next.snakes
+        .filter((snake) => snake.cells[0])
+        .map((snake) => `${snake.cells[0].x}:${snake.cells[0].y}`)
+    );
+    const u = this.unit;
+
+    for (const pellet of previous.pellets) {
+      if (survived.has(`${pellet.x}:${pellet.y}:${pellet.type}`)) continue;
+
+      const worldX = this.offX + (pellet.x + 0.5) * this.cellPx;
+      const worldY = this.offY + (pellet.y + 0.5) * this.cellPx;
+      const color = pellet.type === 1 ? PELLET.bounty : this.pelletColor();
+
+      if (!heads.has(`${pellet.x}:${pellet.y}`)) {
+        // Expired, not eaten: a small colourless puff so the pellet does not
+        // simply blink out, but no score popup and no celebration.
+        for (let index = 0; index < 5; index++) {
+          const angle = (index * Math.PI * 2) / 5;
+          this.particles.push({
+            x: worldX,
+            y: worldY,
+            vx: Math.cos(angle) * 0.6 * u * REFERENCE_CELL_PX,
+            vy: Math.sin(angle) * 0.6 * u * REFERENCE_CELL_PX,
+            born: time,
+            life: 320,
+            color: FIELD.decorShadow,
+            size: 2.2 * u,
+          });
+        }
+        continue;
+      }
+
+      // Burst velocities are pre-scaled to pixels-per-life, so the burst covers
+      // the same fraction of a cell at any canvas size.
+      const count = pellet.type === 1 ? 12 : 8;
+      for (let index = 0; index < count; index++) {
+        const angle = (index * Math.PI * 2) / count + (Math.random() - 0.5) * 0.5;
+        const speed = (1.2 + Math.random() * 2.2) * u * REFERENCE_CELL_PX;
+        this.particles.push({
+          x: worldX,
+          y: worldY,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          born: time,
+          life: 450,
+          color,
+          size: (3 + Math.random() * 2.5) * u,
+        });
+      }
+
+      this.scorePopups.push({
+        x: worldX,
+        y: worldY - 6 * u,
+        text: pellet.type === 1 ? '+3' : '+1',
+        color,
+        born: time,
+      });
+    }
   }
 
   update(time: number) {
@@ -231,7 +308,6 @@ export class MatchScene extends Phaser.Scene {
 
   private renderSnapshot(state: RenderSnapshot, time: number) {
     const g = this.actors;
-    const u = this.unit;
     g.clear();
 
     // 1. Draw Active Shrinking Boundary & Forbidden Zone
@@ -248,45 +324,8 @@ export class MatchScene extends Phaser.Scene {
     }
     this.previousBounds = state.bounds;
 
-    // 2. Track Eaten Pellets for Juicy Particle FX
-    const currentPelletKeys = new Set(state.pellets.map((p) => `${p.x}:${p.y}:${p.type}`));
-    for (const key of this.previousPellets) {
-      if (!currentPelletKeys.has(key)) {
-        const [px, py, type] = key.split(':').map(Number);
-        const worldX = this.offX + (px + 0.5) * this.cellPx;
-        const worldY = this.offY + (py + 0.5) * this.cellPx;
-
-        // Spawn Burst Particles. Velocities are pre-scaled to pixels-per-life so
-        // the burst covers the same fraction of a cell at any canvas size.
-        const count = type === 1 ? 12 : 8;
-        const color = type === 1 ? PELLET.bounty : this.pelletColor();
-        for (let i = 0; i < count; i++) {
-          const angle = (i * Math.PI * 2) / count + (Math.random() - 0.5) * 0.5;
-          const speed = (1.2 + Math.random() * 2.2) * u * REFERENCE_CELL_PX;
-          this.particles.push({
-            x: worldX,
-            y: worldY,
-            vx: Math.cos(angle) * speed,
-            vy: Math.sin(angle) * speed,
-            born: time,
-            life: 450,
-            color,
-            size: (3 + Math.random() * 2.5) * u,
-          });
-        }
-
-        this.scorePopups.push({
-          x: worldX,
-          y: worldY - 6 * u,
-          text: type === 1 ? '+3' : '+1',
-          color,
-          born: time,
-        });
-      }
-    }
-    this.previousPellets = currentPelletKeys;
-
-    // 3. Render Floating Pellets
+    // 2. Render Floating Pellets. Pickup FX are spawned per tick in
+    //    `spawnPelletFx`, not here — see the note there on eaten vs expired.
     for (const pellet of state.pellets) {
       const bobRange = this.cellPx * 0.1;
       const bob = Math.sin(time / 200 + pellet.x * 2 + pellet.y) * bobRange;
