@@ -21,12 +21,12 @@ The monorepo is scaffolded and green. Verified locally (2026-08-15):
 | Deterministic sim (single source of truth) | `packages/sim` | ✅ Ported from spike + arena pre-derivation (D28), context-separated RNG, `SIM_VERSION` gate (D31), golden hashes locked |
 | REST + WS server (single port, D26) | `packages/server` | ✅ Fastify + Colyseus attach; health, Today's Run verification, room APIs, wallet profiles, leaderboard, rewards schedule, payout status, admin stats; SQLite/WAL with the §6 schema |
 | Authoritative match room | `packages/server/src/rooms` | ✅ Tick loop (110ms), room codes (Crockford), bots free-play only (D5), input log capture (D27), rematch |
-| Client shell | `packages/client` | 🟡 Responsive Lawn League landing page, room creation/join, unified PvP/Today's Run match framing, visible mobile control docks, dimensional Phaser arena, result sharing, wallet initialization, and room-code PvP are implemented; creator joins are StrictMode-safe and final snakes remain visible; real-device QA remains |
+| Client shell | `packages/client` | 🟡 Landscape-first shell, turf-tiled pixel-art arena, swipe/hold gesture play, rebuilt lobby, room creation/join, unified PvP/Today's Run framing, result sharing, wallet initialization, and room-code PvP are implemented; creator joins are StrictMode-safe and final snakes remain visible; **no browser/device QA has been run on the new art direction or gestures** |
 | CI / deploy workflows | `.github/workflows` | ✅ ci.yml (typecheck/lint/tests/build) + deploy.yml template (Railway webhook + static host) |
 
 ### Decisions made this milestone
 
-D35 (scaffold runtime: tsx source-mode, no build orchestration) · D36 (Colyseus 0.16 pinned, `defineTypes()` schemas) · D37 (authoritative PvP e2e verified) · D38 (verify API shipped early) · D39 (client plays local bot matches in W1; PvP wiring in W2) · D40 (Fresh Rink UI + code-split Lawn League renderer) · D41 (Fresh Rink interaction polish) · D42 (StrictMode-safe PvP joins) · D43 (responsive landing, unified match/mobile controls, and restrained 2.5D Phaser depth) · D44 (2–4 active PvP seats; dead players observe, late spectator joins rejected).
+D35 (scaffold runtime: tsx source-mode, no build orchestration) · D36 (Colyseus 0.16 pinned, `defineTypes()` schemas) · D37 (authoritative PvP e2e verified) · D38 (verify API shipped early) · D39 (client plays local bot matches in W1; PvP wiring in W2) · D40 (Fresh Rink UI + code-split Lawn League renderer) · D41 (Fresh Rink interaction polish) · D42 (StrictMode-safe PvP joins) · D43 (responsive landing, unified match/mobile controls, and restrained 2.5D Phaser depth) · D44 (2–4 active PvP seats; dead players observe, late spectator joins rejected) · D45 (room connection hardening) · D46 (landscape-first, gesture-only play; d-pad and boost button removed) · D47 (pixel-art direction from CC0 asset packs; supersedes D43's procedural-layers clause).
 
 ### Not done yet (needs human/credentials or is planned for W2)
 
@@ -47,9 +47,22 @@ It also requires the payout signer and rejects wildcard production CORS (`c8e15b
 
 ---
 
-### Connection hardening completed (D47)
+### Connection hardening completed (D45)
 
 The authoritative room now uses the 110ms simulation cadence for patches, rejects malformed input, blocks duplicate room-code instances, locks matches once play begins, pauses briefly for unexpected reconnects, records disconnect/timeout forfeits as deterministic inputs, and requires unanimous rematch confirmation. Focused room tests cover capacity, countdown cancellation, reconnection, malformed input, forfeits, and four-player play.
+
+### Client art direction and controls completed (D46/D47)
+
+Commits `9edcde1`, `6b65974`, `8f8d3d3`, `5ca83d7`. Client tests grew 3 → 29.
+
+- Device-pixel canvas and one shared responsive game factory; Phaser 3 has no DPR support of its own, so the field was previously upscaled and soft.
+- Landscape-first presentation (orientation lock attempted, CSS rotation as the real mechanism). This also fixed a live control bug: `swipeToDir` already compensated for a rotation that did not exist, so a rightward swipe steered the snake upward.
+- D-pad and boost button deleted; swipe to steer, hold the right half to boost, keyboard unchanged on desktop.
+- Field tiled from the CC0 Kenney "Tiny Town" 16px sheet with seeded per-cell variants; `pixelArt` rendering. The old mow stripes ran one per gameplay column, which made the 30×30 lattice the most prominent thing on screen.
+- Lobby rebuilt on the same turf material; marketing hero, symmetric stat grid (with its stale "1v1" claim) and CSS faux-3D snakes removed; interface emoji replaced by 16px-lattice `PixelIcon`s.
+- Fixed a false "+3" celebration on bounty expiry and a shrink countdown that ran a 10s timer on an 11s event.
+
+**Outstanding:** none of this has been seen in a browser. Highest-risk unknown is safe-area insets under the CSS rotation, where `env(safe-area-inset-*)` no longer matches the visual edges.
 
 ## Success metrics (D19) — tracking
 

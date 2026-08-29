@@ -8,7 +8,9 @@ Read, in order: `docs/AI_HANDOFF.md` → `docs/lifecycle/INDEX.md` → `docs/PRO
 
 ## Where we are
 
-The project now supports 2–4 active PvP players with deterministic four-lane spawns and tick-major replay logs. Late spectator joins are rejected; a player who dies remains connected and watches the survivors. The UI received a second restrained premium polish pass: the landing page now scales from a richer desktop arena-entry layout to a scrollable mobile flow; PvP and Today's Run share a darker match frame and an explicit mobile control dock; and the Phaser field has recessed lawn depth, seeded mow bands, contact shadows, stronger pickup depth, and clearer shrink urgency.
+The project now supports 2–4 active PvP players with deterministic four-lane spawns and tick-major replay logs. Late spectator joins are rejected; a player who dies remains connected and watches the survivors.
+
+The client had a separate art-direction and layout pass (D46/D47). The arena is no longer procedural vector art: the field is tiled from the CC0 Kenney "Tiny Town" 16px sheet and Phaser renders with `pixelArt` (nearest-neighbour). The app presents landscape-first, the on-screen d-pad and boost button are gone in favour of swipe-to-steer plus hold-right-to-boost, and the lobby was rebuilt on the same turf as the match field.
 
 Latest verification: lint and workspace typecheck passed; sim tests passed (16/16), client tests passed (29/29), and the serialized server suite passed (45/45). The full workspace test command is green.
 
@@ -23,9 +25,23 @@ Latest verification: lint and workspace typecheck passed; sim tests passed (16/1
 - **Known shortcuts:** server runs via `tsx`; Colyseus 0.16 remains pinned with `defineTypes()` schemas; PvP create/join-by-code supports 2–4 active seats, creator joins are deferred to avoid duplicate StrictMode connections, and dead players observe through their existing connection while late joins are rejected; wallet discovery and rotated controls still need real-WebView validation; `todayScore` remains a documented placeholder; exact collision-loss reasons are not exposed by sim state and should not be guessed in UI.
 - **UI verification:** current typecheck, client tests, and client production build pass. The build is split into ~103 kB initial JS, ~325 kB gzip on-demand Phaser/control chunk, and ~3.8 kB Today's Run view chunk. Automated browser screenshots remain unavailable in this environment, so real-device portrait/safe-area validation is still required.
 
-## Connection hardening completed (D47)
+## Connection hardening completed (D45)
 
 The server room now aligns patches with the 110ms simulation tick, validates input turns, rejects duplicate in-process PvP room codes, locks matches at play start, pauses on unexpected disconnects for bounded Colyseus reconnection, records consented/time-out forfeits as deterministic sim inputs, preserves dead-player state, and requires all remaining players to confirm a rematch. The focused room suite and full workspace tests cover these paths.
+
+## Client art direction and controls (D46/D47)
+
+Committed in `9edcde1`, `6b65974`, `8f8d3d3`, `5ca83d7`.
+
+- **Rendering foundation:** the canvas is sized in device pixels (capped at 2x) with CSS pinning the display size. Phaser 3 has no DPR support of its own — in RESIZE mode it sets `canvas.width` straight from `getBoundingClientRect()` — so the field used to be upscaled and soft. `createMatchGame` is now the single responsive factory for both the match and Today's Run, which previously duplicated the setup and froze the canvas at a mount-time `innerHeight > innerWidth` guess.
+- **Landscape (D46):** `screen.orientation.lock('landscape')` is attempted, then a CSS 90deg rotation carries it on coarse-pointer devices in portrait. The lock cannot be relied on (unimplemented on iOS Safari, needs fullscreen elsewhere). This rotation was always assumed: `swipeToDir` already held the inverse mapping, so before it existed a rightward swipe steered the snake upward.
+- **Controls (D46):** `GameControls` is deleted. Swipe steers (firing on threshold, not release), holding the right half boosts after a 120ms dwell that yields to a swipe, and boost force-releases on pointercancel/blur/visibilitychange/unmount — a stuck boost eats a tail segment per second.
+- **Field (D47):** tiled from the Kenney sheet with a seeded per-cell variant, so nothing correlates with the 30×30 lattice. The old mow stripes were drawn one per gameplay column, which made the grid the most prominent thing on screen. Cell size is floored to a whole device pixel; the tile interior scales fractionally because 30 cells at native 16px need 480px, more than a phone has in landscape.
+- **Theme:** `game/theme.ts` is the single source for arena colour and lighting, with one light direction and four seat skins whose shade/highlight derive from the base colour. Seat shades used to be hardcoded per index, which ignored the server's `snake.color` and had no answer beyond two seats.
+- **Lobby:** rebuilt on the same turf as the field (a 572-byte inlined patch, not a live Phaser instance). The marketing-shaped hero, the symmetric stat grid and its stale "1v1" claim, and the CSS faux-3D snakes are gone. `PixelIcon` draws icons as rects on the same 16px lattice; interface emoji are removed (kept only in outbound share text).
+- **Bugs fixed:** expired bounties fired a false "+3" celebration (any pellet disappearance counted as an eat, but `step()` also drops bounties past `BOUNTY_MAX_AGE`); the shrink countdown was a 10s timer on an 11s event, drifting a second per cycle. Countdown arithmetic now lives in `game/matchHud.ts` with regression tests.
+
+**Not visually verified.** No browser or device pass has been run on any of this — typecheck, tests, lint and build are green, but the pixel field, the rotated stage, the gestures and the lobby all still need a real-device/simulator check. Safe-area insets under the CSS rotation are the most likely problem: `env(safe-area-inset-*)` refers to physical edges, which no longer match the visual ones once the stage is rotated.
 
 ## Immediate next actions (W2)
 
@@ -42,7 +58,7 @@ modify the frontend until the user approves it.
 
 1. Nimiq wallet: provider lifecycle, explicit account access, fallback states, and `signWalletMessage()` are implemented. Validate them in Nimiq Pay and add the address to the HUD.
 2. Wallet/daily APIs: `/wallet/register`, `/wallet/:address`, `/leaderboard/today`, and `/streaks/:wallet` are implemented. Leaderboard responses include masked wallets/total count and rewards publish pool metadata. `/runs/verify` verifies the Nimiq public key/signature and binds verified runs to wallet streak profiles.
-3. Real-device pass in Nimiq Pay: rotation/resize events, safe areas, touch/swipe/d-pad/boost, native share sheet, and wallet approval states.
+3. Real-device pass in Nimiq Pay: rotation/resize events, safe areas (see the D46/D47 note — insets under the CSS rotation are unvalidated), swipe-to-steer and hold-right-to-boost, native share sheet, and wallet approval states.
 4. Feed live leaderboard/streak data into Today's Run and the lobby; add wallet identity to the match HUD. The server streak endpoint is available for that integration.
 5. Fund and validate the implemented Nimiq testnet reward broadcaster in deployment.
 6. Keep server Vitest files serialized because the SQLite singleton and `DB_PATH` are process-global. The current
@@ -57,7 +73,8 @@ modify the frontend until the user approves it.
 - Reward modes never contain bots (D5/D28); the room already enforces bot = free-play only.
 - The house never holds player funds (D2/D4) — payouts only ever go out from the seeded pool.
 - HUD/controls overlay the canvas absolutely (D11) — never in-flow.
-- UI decision D43: Phaser remains render-only; visual depth is achieved with cached/procedural 2D layers, contact shadows, and restrained feedback rather than a gameplay-affecting 3D or shader stack.
+- UI decision D43: Phaser remains **render-only** — no gameplay-affecting 3D or shader stack. D47 supersedes only D43's *procedural-layers* clause: the field is now tiled from a vendored CC0 asset sheet rather than drawn as vector layers. The render-only boundary itself is unchanged.
+- Vendored art must be **CC0 or CC-BY only** (D47) — never CC-BY-SA or GPL, which would conflict with the repo's MIT licence. Record provenance in `packages/client/src/assets/ATTRIBUTION.md`.
 
 ## Environment notes
 
