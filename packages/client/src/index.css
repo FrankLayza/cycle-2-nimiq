@@ -32,6 +32,22 @@
 
 .font-display { font-family: var(--font-display); letter-spacing: 0; }
 
+.lobby-stage {
+  position: relative;
+  isolation: isolate;
+}
+
+.lobby-stage::before {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 0.35rem;
+  background: var(--color-coral);
+  content: '';
+  z-index: -1;
+}
+
+.lobby-content { position: relative; }
+
 @layer base {
   html {
     height: 100%;

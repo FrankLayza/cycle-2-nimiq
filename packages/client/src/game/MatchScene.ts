@@ -18,12 +18,27 @@ import {
   TURF_TILE_PX,
   buildTurfLayout,
 } from './turf';
+import {
+  PIECE,
+  SNAKE_SPRITE_PX,
+  angleForDirection,
+  cornerAngle,
+  snakeFrame,
+} from './snakeSprites';
+import { SNAKE_TEXTURE_KEY, ensureSnakeTexture } from './snakeTexture';
 
 /** Render order. Turf tiles are re-added on every field rebuild, so depth is explicit. */
+/** Contact-shadow strength for the snake silhouette pass. */
+const SNAKE_SHADOW_ALPHA = 0.34;
+
 const DEPTH = {
   turf: -20,
   field: -10,
-  actors: 0,
+  /** Boundary and pellets, under the snakes. */
+  actors: -5,
+  snakes: 0,
+  /** Particles, score popups and the shrink flash, over the snakes. */
+  fx: 10,
 } as const;
 
 interface FloatingPopup {
@@ -49,6 +64,10 @@ export class MatchScene extends Phaser.Scene {
   private turf!: Phaser.GameObjects.Group;
   private field!: Phaser.GameObjects.Graphics;
   private actors!: Phaser.GameObjects.Graphics;
+  private fx!: Phaser.GameObjects.Graphics;
+  /** Reused snake piece sprites — two per body cell (shadow pass, then body). */
+  private readonly spritePool: Phaser.GameObjects.Image[] = [];
+  private spritesUsed = 0;
   private ready = false;
   private previous: RenderSnapshot | null = null;
   private current: RenderSnapshot | null = null;
@@ -101,6 +120,8 @@ export class MatchScene extends Phaser.Scene {
     this.turf = this.add.group();
     this.field = this.add.graphics().setDepth(DEPTH.field);
     this.actors = this.add.graphics().setDepth(DEPTH.actors);
+    this.fx = this.add.graphics().setDepth(DEPTH.fx);
+    ensureSnakeTexture(this);
     this.ready = true;
 
     this.scale.on('resize', () => {
@@ -234,7 +255,8 @@ export class MatchScene extends Phaser.Scene {
   update(time: number) {
     if (!this.current) return;
     const alpha = (time - this.currentReceivedAt) / TICK_MS;
-    this.renderSnapshot(interpolateSnapshots(this.previous, this.current, alpha), time);
+    // Positions interpolate; piece choice and rotation come from the raw cells.
+    this.renderSnapshot(interpolateSnapshots(this.previous, this.current, alpha), this.current, time);
   }
 
   private drawField(seed: number) {
@@ -295,9 +317,11 @@ export class MatchScene extends Phaser.Scene {
     }
   }
 
-  private renderSnapshot(state: RenderSnapshot, time: number) {
+  private renderSnapshot(state: RenderSnapshot, topology: RenderSnapshot, time: number) {
     const g = this.actors;
+    const fx = this.fx;
     g.clear();
+    fx.clear();
 
     // 1. Draw Active Shrinking Boundary & Forbidden Zone
     this.drawBoundary(g, state);
@@ -336,51 +360,138 @@ export class MatchScene extends Phaser.Scene {
       else this.drawApple(g, x, y);
     }
 
-    // 4. Render Snakes
-    for (const snake of state.snakes) {
-      if (!snake.cells[0]) continue;
+    // 3. Render Snakes as pixel sprites
+    this.renderSnakes(state, topology, fx, time);
 
-      // Colours derive from the seat skin, so any seat count and any
-      // server-supplied colour renders correctly.
-      const skin = skinFor(snake.id, snake.color);
-      const shadow = shadowOffset(this.cellPx);
+    // 4. Render Particle Bursts & Score Popups, above the snakes
+    this.drawParticles(fx, time);
+    this.drawPopups(fx, time);
 
-      g.setAlpha(snake.alive ? 1 : 0.4);
-
-      // A. Dynamic Ground Shadows for all segments
-      for (const cell of snake.cells) {
-        const at = this.center(cell);
-        g.fillStyle(LIGHT.groundShadow, snake.alive ? LIGHT.groundShadowAlpha : 0.1);
-        g.fillEllipse(at.x + shadow.x, at.y + shadow.y * 3, this.cellPx * 0.82, this.cellPx * 0.26);
-      }
-
-      // B. Boost Exhaust FX
-      if (snake.boosting && snake.alive) this.drawBoostTrail(g, snake.cells, time);
-
-      // C. Continuous Segment Connectors & Body Pills
-      for (let index = snake.cells.length - 1; index >= 1; index--) {
-        const currentCell = snake.cells[index];
-        const nextCell = snake.cells[index - 1];
-        this.drawConnector(g, currentCell, nextCell, skin.shade, skin.base);
-        this.drawSegment(g, currentCell, skin.base, skin.shade, skin.highlight, index, skin.pattern);
-      }
-
-      // D. Snake Head
-      this.drawHead(g, snake.cells[0], snake.cells[1], skin.base, skin.shade, skin.highlight, snake.boosting);
-
-      g.setAlpha(1);
-    }
-
-    // 5. Render Particle Bursts & Score Popups
-    this.drawParticles(g, time);
-    this.drawPopups(g, time);
-
-    // 6. Arena Boundary Flash on Shrink
+    // 5. Arena Boundary Flash on Shrink
     if (time < this.boundaryFlashUntil) {
       const alpha = (this.boundaryFlashUntil - time) / 300;
-      g.fillStyle(PALETTE.white, alpha * 0.22);
-      g.fillRect(this.offX, this.offY, this.fieldSize, this.fieldSize);
+      fx.fillStyle(PALETTE.white, alpha * 0.22);
+      fx.fillRect(this.offX, this.offY, this.fieldSize, this.fieldSize);
     }
+  }
+
+  /**
+   * Draw every snake from the generated 16px sprite atlas.
+   *
+   * Piece and rotation come from `topology` — the raw authoritative snapshot with
+   * integer cells — while positions come from `view`, the interpolated one. Taking
+   * direction from interpolated cells would read fractional deltas whose sign
+   * flickers mid-tick.
+   *
+   * Sprites are pooled and reused each frame, and all share one texture, so a full
+   * four-snake field costs very few draw calls. Each piece is drawn twice: once
+   * tinted dark and offset as a contact shadow, then again as the body. A hard
+   * offset silhouette suits pixel art better than the soft ellipses this replaced.
+   */
+  private renderSnakes(
+    view: RenderSnapshot,
+    topology: RenderSnapshot,
+    fx: Phaser.GameObjects.Graphics,
+    time: number
+  ) {
+    this.spritesUsed = 0;
+    const scale = this.cellPx / SNAKE_SPRITE_PX;
+    const shadow = shadowOffset(this.cellPx);
+    const cellsById = new Map(topology.snakes.map((snake) => [snake.id, snake.cells]));
+
+    for (const snake of view.snakes) {
+      const positions = snake.cells;
+      const shape = cellsById.get(snake.id) ?? positions;
+      if (!positions.length || positions.length !== shape.length) continue;
+
+      /*
+       * Colour comes from the seat's baked atlas frames, not from `snake.color`.
+       * The palette is derived from `SEAT_SKINS`, so all four seats are covered,
+       * but a server-supplied colour outside that palette is not reflected in the
+       * sprites. The server currently sends the seat hues, so this is latent —
+       * honouring arbitrary colours would mean baking extra atlas frames per match.
+       */
+      const alpha = snake.alive ? 1 : 0.35;
+
+      // Tail first, so the head ends up on top of its own body.
+      for (let index = positions.length - 1; index >= 0; index--) {
+        const { piece, angle } = this.pieceFor(shape, index);
+        const frame = snakeFrame(snake.id, piece);
+        const at = this.center(positions[index]);
+
+        const cast = this.takeSprite();
+        cast.setFrame(frame);
+        cast.setPosition(at.x + shadow.x, at.y + shadow.y);
+        cast.setAngle(angle);
+        cast.setScale(scale);
+        cast.setTintFill(LIGHT.groundShadow);
+        cast.setAlpha(alpha * SNAKE_SHADOW_ALPHA);
+
+        const body = this.takeSprite();
+        body.setFrame(frame);
+        body.setPosition(at.x, at.y);
+        body.setAngle(angle);
+        body.setScale(scale);
+        body.clearTint();
+        body.setAlpha(alpha);
+      }
+
+      if (snake.boosting && snake.alive) this.drawBoostTrail(fx, positions, time);
+    }
+
+    for (let index = this.spritesUsed; index < this.spritePool.length; index++) {
+      this.spritePool[index].setVisible(false);
+    }
+  }
+
+  /** Which piece a body index needs, and the quarter turn to orient it. */
+  private pieceFor(cells: RenderCell[], index: number): { piece: number; angle: number } {
+    const last = cells.length - 1;
+
+    if (index === 0) {
+      const neck = cells[1];
+      const dx = neck ? cells[0].x - neck.x : 1;
+      const dy = neck ? cells[0].y - neck.y : 0;
+      return { piece: PIECE.head, angle: angleForDirection(dx, dy) };
+    }
+
+    if (index === last) {
+      const inner = cells[last - 1];
+      // The tip points away from the body, so the open edge faces the neighbour.
+      return {
+        piece: PIECE.tail,
+        angle: angleForDirection(cells[last].x - inner.x, cells[last].y - inner.y),
+      };
+    }
+
+    const towardHead = cells[index - 1];
+    const towardTail = cells[index + 1];
+    const headX = Math.sign(towardHead.x - cells[index].x);
+    const headY = Math.sign(towardHead.y - cells[index].y);
+    const tailX = Math.sign(towardTail.x - cells[index].x);
+    const tailY = Math.sign(towardTail.y - cells[index].y);
+
+    // Collinear neighbours mean a straight run; anything else is an elbow.
+    if (headX === -tailX && headY === -tailY) {
+      return { piece: PIECE.straight, angle: angleForDirection(headX, headY) };
+    }
+    return { piece: PIECE.corner, angle: cornerAngle(tailX, tailY, headX, headY) };
+  }
+
+  /** Take a sprite from the pool, growing it only when a longer snake needs it. */
+  private takeSprite(): Phaser.GameObjects.Image {
+    if (this.spritesUsed < this.spritePool.length) {
+      const sprite = this.spritePool[this.spritesUsed++];
+      sprite.setVisible(true);
+      return sprite;
+    }
+    const sprite = this.add
+      .image(0, 0, SNAKE_TEXTURE_KEY, 0)
+      .setOrigin(0.5, 0.5)
+      .setDepth(DEPTH.snakes);
+    this.spritePool.push(sprite);
+    this.spritesUsed++;
+    return sprite;
   }
 
   /** Normal-pellet accent. Kept separate so the pellet art can be re-themed in one place. */
@@ -500,142 +611,8 @@ export class MatchScene extends Phaser.Scene {
     };
   }
 
-  private drawConnector(
-    g: Phaser.GameObjects.Graphics,
-    from: RenderCell,
-    to: RenderCell,
-    outline: number,
-    base: number
-  ) {
-    const p1 = this.center(from);
-    const p2 = this.center(to);
-    const thickness = this.cellPx * 0.78;
 
-    g.lineStyle(thickness + 4 * this.unit, outline, 1);
-    g.lineBetween(p1.x, p1.y, p2.x, p2.y);
 
-    g.lineStyle(thickness, base, 1);
-    g.lineBetween(p1.x, p1.y, p2.x, p2.y);
-  }
-
-  private drawSegment(
-    g: Phaser.GameObjects.Graphics,
-    cell: RenderCell,
-    base: number,
-    outline: number,
-    highlight: number,
-    index: number,
-    pattern: number
-  ) {
-    const { x, y } = this.center(cell);
-    const size = this.cellPx * 0.88;
-    const bevel = 1.5 * this.unit;
-    const spec = specularOffset(this.cellPx);
-
-    // 1. Shaded bevel rim
-    g.fillStyle(outline, 1);
-    g.fillRoundedRect(x - size / 2 - bevel, y - size / 2 - bevel, size + bevel * 2, size + bevel * 2, size * 0.47);
-
-    // 2. Main body
-    g.fillStyle(base, 1);
-    g.fillRoundedRect(x - size / 2, y - size / 2, size, size, size * 0.43);
-
-    // 3. Specular gloss, positioned by the scene light
-    g.fillStyle(PALETTE.white, 0.38);
-    g.fillRoundedRect(
-      x + spec.x - size * 0.24,
-      y + spec.y - size * 0.26,
-      size * 0.48,
-      size * 0.22,
-      size * 0.11
-    );
-
-    // 4. Dorsal marking. The variant is per seat so players stay distinguishable
-    //    without relying on hue — coral/teal are the common red-green confusion pair.
-    if (index % 2 !== 0) return;
-    g.fillStyle(highlight, 0.45);
-    switch (pattern % 4) {
-      case 0:
-        g.fillCircle(x, y - size * 0.08, size * 0.16);
-        break;
-      case 1:
-        g.fillCircle(x - size * 0.17, y - size * 0.08, size * 0.1);
-        g.fillCircle(x + size * 0.17, y - size * 0.08, size * 0.1);
-        break;
-      case 2:
-        g.fillRect(x - size * 0.24, y - size * 0.14, size * 0.48, size * 0.12);
-        break;
-      default:
-        g.lineStyle(size * 0.1, highlight, 0.45);
-        g.strokeCircle(x, y - size * 0.06, size * 0.18);
-        break;
-    }
-  }
-
-  private drawHead(
-    g: Phaser.GameObjects.Graphics,
-    head: RenderCell,
-    neck: RenderCell | undefined,
-    base: number,
-    outline: number,
-    highlight: number,
-    boosting: boolean
-  ) {
-    const { x, y } = this.center(head);
-    const u = this.unit;
-    const size = this.cellPx * 1.15;
-    const dx = neck ? Math.sign(head.x - neck.x) : 1;
-    const dy = neck ? Math.sign(head.y - neck.y) : 0;
-    const spec = specularOffset(this.cellPx);
-
-    // 1. Bevel base
-    g.fillStyle(outline, 1);
-    g.fillCircle(x, y, size * 0.54);
-
-    // 2. Main head
-    g.fillStyle(base, 1);
-    g.fillCircle(x, y, size * 0.48);
-
-    // 3. Gloss crescent, positioned by the scene light
-    g.fillStyle(PALETTE.white, 0.32);
-    g.fillEllipse(x + spec.x, y + spec.y, size * 0.44, size * 0.24);
-
-    // 4. Directional Eyeballs & Pupils
-    const sideX = dy * size * 0.22;
-    const sideY = -dx * size * 0.22;
-    const forwardX = dx * size * 0.18;
-    const forwardY = dy * size * 0.18;
-    const shadow = shadowOffset(this.cellPx);
-
-    for (const side of [-1, 1]) {
-      const eyeX = x + forwardX + sideX * side;
-      const eyeY = y + forwardY + sideY * side;
-
-      g.fillStyle(PALETTE.inkDeep, 0.25);
-      g.fillCircle(eyeX + shadow.x * 0.5, eyeY + shadow.y * 0.5, size * 0.16);
-
-      g.fillStyle(PALETTE.white, 1);
-      g.fillCircle(eyeX, eyeY, size * 0.15);
-
-      // Pupil looking in the direction of motion
-      g.fillStyle(PALETTE.ink, 1);
-      g.fillCircle(eyeX + dx * 2.2 * u, eyeY + dy * 2.2 * u, size * 0.075);
-
-      g.fillStyle(PALETTE.white, 0.95);
-      g.fillCircle(eyeX + dx * 2.8 * u + spec.x * 0.2, eyeY + dy * 2.8 * u + spec.y * 0.2, 1.6 * u);
-    }
-
-    // 5. Cheeks, tinted from the body highlight so every seat colour works
-    g.fillStyle(highlight, 0.7);
-    g.fillCircle(x - sideX * 1.5 - dx * 2 * u, y - sideY * 1.5 - dy * 2 * u, 2.8 * u);
-    g.fillCircle(x + sideX * 1.5 - dx * 2 * u, y + sideY * 1.5 - dy * 2 * u, 2.8 * u);
-
-    // 6. Boosting Flare
-    if (boosting) {
-      g.fillStyle(PALETTE.gold, 0.5);
-      g.fillCircle(x + forwardX * 1.6, y + forwardY * 1.6, size * 0.22);
-    }
-  }
 
   private drawApple(g: Phaser.GameObjects.Graphics, x: number, y: number) {
     const u = this.unit;

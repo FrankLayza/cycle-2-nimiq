@@ -67,12 +67,12 @@ export function Lobby({ wallet, onConnectWallet, onPlay, onPvp, onToday, onCreat
         : `Daily seeded run · ${streak} day${streak === 1 ? '' : 's'}`;
 
   return (
-    <main className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-ink-deep px-4 pb-3 pt-3 text-cream @2xl:px-6 @4xl:px-10">
+    <main className="lobby-stage flex h-full min-h-0 w-full flex-col overflow-hidden bg-ink-deep px-5 pb-4 pt-5 text-cream @2xl:px-8 @4xl:px-12">
       {/* Header */}
       <header className="flex shrink-0 items-center justify-between gap-3 pb-3">
         <div className="flex items-center gap-2.5">
           <span
-            className="turf-panel grid h-9 w-9 shrink-0 place-items-center rounded-lg text-sm font-black text-white"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border-2 border-teal bg-teal text-2xl font-black text-ink shadow-[0_4px_0_var(--color-teal-dark)]"
             style={{ textShadow: '0 1px 2px rgb(3 14 9 / 70%)' }}
             aria-hidden="true"
           >
@@ -82,8 +82,8 @@ export function Lobby({ wallet, onConnectWallet, onPlay, onPvp, onToday, onCreat
             <span className="block text-[9px] font-black uppercase tracking-[0.18em] text-teal">
               Nimiq Mini App
             </span>
-            <span className="block text-sm font-black tracking-tight text-white @2xl:text-base">
-              Competitive Snake
+            <span className="font-display block text-lg font-bold leading-none text-white">
+              SNAKE RINK
             </span>
           </span>
         </div>
@@ -104,7 +104,7 @@ export function Lobby({ wallet, onConnectWallet, onPlay, onPvp, onToday, onCreat
             className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-[11px] font-black text-white transition-colors duration-150 hover:bg-white/20"
             onClick={onConnectWallet}
           >
-            Connect Wallet
+            CONNECT WALLET
           </button>
         )}
       </header>
@@ -112,25 +112,27 @@ export function Lobby({ wallet, onConnectWallet, onPlay, onPvp, onToday, onCreat
       {/* Body: the arena on the left, the ways into it on the right. Capped and
           centred so a tall desktop window reads as a composed block rather than a
           phone layout adrift in empty space. */}
-      <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 items-center gap-5 @2xl:gap-7">
+      <div className="lobby-content mx-auto flex min-h-0 w-full max-w-6xl flex-1 items-center gap-8 @2xl:gap-12">
         {/* The arena at rest — same turf and same dashed boundary marker as the
             live field. Dropped on very short or narrow viewports, where the
             actions need the room more than the preview does. */}
         <div
-          className="turf-panel turf-panel-preview hidden aspect-square h-full max-h-56 shrink-0 rounded-xl @2xl:block @4xl:max-h-80"
+          className="turf-panel turf-panel-preview hidden aspect-square h-full max-h-40 shrink-0 rounded-xl opacity-45 @2xl:block @4xl:max-h-52"
           aria-hidden="true"
         />
 
-        <div className="flex min-w-0 flex-1 flex-col gap-3">
-          <h2 className="m-0 text-2xl font-black leading-[1.05] tracking-tight text-white @2xl:text-3xl @4xl:text-[2.6rem]">
-            Up to four snakes,
-            <br />
-            one shrinking arena.
+        <div className="flex min-w-0 flex-1 flex-col gap-4">
+          <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-lemon">
+            <span className="h-2 w-2 rounded-full bg-lemon" />
+            Four seats. One rink.
+          </div>
+          <h2 className="font-display m-0 text-4xl font-bold leading-[0.9] text-white @2xl:text-6xl @4xl:text-7xl">
+            GROW.<br />BOOST.<br /><span className="text-coral">OUTPLAY.</span>
           </h2>
 
           <button
             type="button"
-            className="btn-3d btn-3d-coral min-h-12 w-full rounded-xl text-lg tracking-wide @2xl:min-h-14 @2xl:text-xl"
+            className="btn-3d btn-3d-coral min-h-16 w-full rounded-xl text-2xl font-bold @2xl:min-h-20 @2xl:text-3xl"
             onClick={onPlay}
           >
             PLAY
@@ -168,8 +170,8 @@ export function Lobby({ wallet, onConnectWallet, onPlay, onPvp, onToday, onCreat
             </button>
           </div>
 
-          <p className="m-0 text-[10px] font-bold text-white/45">
-            Quick Match runs against a bot and starts immediately — no wallet needed.
+          <p className="m-0 max-w-md text-sm font-bold leading-relaxed text-white/60">
+            A fast arena match where every turn closes the rink around you.
           </p>
         </div>
       </div>

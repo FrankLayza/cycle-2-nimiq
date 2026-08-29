@@ -83,6 +83,17 @@ export function highlightOf(base: number): number {
   return mixHex(base, WARM_LIGHT, 0.55);
 }
 
+/**
+ * Sprite outline colour — much darker than `shadeOf`, close to ink.
+ *
+ * Pixel sprites need a dark unified outline to separate from *any* background.
+ * A merely-darker tint of the base is not enough on turf: the teal seat sits close
+ * to the grass hue and its body dissolved into the field.
+ */
+export function outlineOf(base: number): number {
+  return mixHex(base, PALETTE.inkDeep, 0.62);
+}
+
 export interface SeatSkin {
   seat: number;
   /** Display name for the HUD / lobby. */
