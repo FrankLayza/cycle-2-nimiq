@@ -3,6 +3,7 @@
 /* Fresh Rink palette (D21) — bright, friendly, trustworthy. No neon/dark-crypto. */
 @theme {
   --font-sans: 'Nunito', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Pixelify Sans', 'Nunito', ui-sans-serif, system-ui, sans-serif;
   --color-cream: #f5f3ee;
   --color-cream-deep: #ebe7dd;
   --color-ink: #172235;
@@ -28,6 +29,8 @@
   --color-gold: #f59e0b;
   --color-gold-deep: #b45309;
 }
+
+.font-display { font-family: var(--font-display); letter-spacing: 0; }
 
 @layer base {
   html {
@@ -502,4 +505,3 @@
     animation: none !important;
   }
 }
-

@@ -133,7 +133,7 @@ export function Lobby({ wallet, onConnectWallet, onPlay, onPvp, onToday, onCreat
             className="btn-3d btn-3d-coral min-h-12 w-full rounded-xl text-lg tracking-wide @2xl:min-h-14 @2xl:text-xl"
             onClick={onPlay}
           >
-            Quick Match
+            PLAY
           </button>
 
           <div className="grid gap-2 @2xl:grid-cols-2">
@@ -146,7 +146,7 @@ export function Lobby({ wallet, onConnectWallet, onPlay, onPvp, onToday, onCreat
                 <PixelIcon name="friends" size={18} />
               </span>
               <span className="min-w-0">
-                <span className="block text-sm font-black text-white">Play a Friend</span>
+                <span className="block text-sm font-black text-white">PLAY WITH A FRIEND</span>
                 <span className="block text-[10px] font-semibold text-white/60">
                   Room code · 2–4 players
                 </span>
@@ -162,7 +162,7 @@ export function Lobby({ wallet, onConnectWallet, onPlay, onPvp, onToday, onCreat
                 <PixelIcon name="daily" size={18} />
               </span>
               <span className="min-w-0">
-                <span className="block text-sm font-black text-white">Today&apos;s Run</span>
+                <span className="block text-sm font-black text-white">TODAY&apos;S RUN</span>
                 <span className="block text-[10px] font-semibold text-white/60">{dailyDetail}</span>
               </span>
             </button>

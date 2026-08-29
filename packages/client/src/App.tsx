@@ -55,15 +55,15 @@ export function App() {
           roomError={roomError}
         />
       ) : screen === 'match' ? (
-        <Suspense fallback={<ScreenLoader label="Preparing the field…" />}><MatchView
+        <Suspense fallback={<ScreenLoader label="Preparing the rink" />}><MatchView
           key={matchKey}
           onExit={() => setScreen('lobby')}
           onRematch={() => setMatchKey((k) => k + 1)}
         /></Suspense>
       ) : screen === 'today' ? (
-        <Suspense fallback={<ScreenLoader label="Preparing today’s field…" />}><TodayRunView wallet={wallet} onExit={() => setScreen('lobby')} /></Suspense>
+        <Suspense fallback={<ScreenLoader label="Preparing today\'s field" />}><TodayRunView wallet={wallet} onExit={() => setScreen('lobby')} /></Suspense>
       ) : (
-        <Suspense fallback={<ScreenLoader label="Joining the room…" />}><MatchView key={roomCode} mode="pvp" roomCode={roomCode} wallet={wallet?.address} onExit={() => setScreen('lobby')} onRematch={() => setRoomCode(roomCode)} /></Suspense>
+        <Suspense fallback={<ScreenLoader label="Connecting to the match" />}><MatchView key={roomCode} mode="pvp" roomCode={roomCode} wallet={wallet?.address} onExit={() => setScreen('lobby')} onRematch={() => setRoomCode(roomCode)} /></Suspense>
       )}
       </div>
     </LandscapeStage>
@@ -74,9 +74,9 @@ function ScreenLoader({ label }: { label: string }) {
   return (
     <div className="fixed inset-0 grid place-items-center bg-cream text-center p-6">
       <div className="status-pop flex flex-col items-center">
-        <div className="loading-snake mb-5 h-8 w-28 rounded-full bg-linear-to-r from-teal to-teal-dark shadow-xs" />
+        <div className="loading-snake mb-5 h-8 w-28 rounded-full bg-teal shadow-xs" />
         <p className="m-0 text-base font-black tracking-tight text-ink">{label}</p>
-        <span className="mt-2 text-xs font-bold uppercase tracking-widest text-muted">Lawn League</span>
+        <span className="mt-2 text-xs font-bold text-muted">Competitive Snake</span>
       </div>
     </div>
   );

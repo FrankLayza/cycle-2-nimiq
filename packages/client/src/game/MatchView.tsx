@@ -25,8 +25,7 @@ interface Props {
 }
 
 interface HudState {
-  you: number;
-  rival: number;
+  players: Array<{ seat: number; score: number; alive: boolean; isYou: boolean }>;
   alive: number;
   boundary: number;
   seed: number;
@@ -56,8 +55,10 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
   const roomRef = useRef<Room<ClientMatchState> | null>(null);
   const pendingRef = useRef<AppliedInput>({ turn: null, boost: false });
   const [hud, setHud] = useState<HudState>({
-    you: 0,
-    rival: 0,
+    players: [
+      { seat: 0, score: 0, alive: true, isYou: true },
+      { seat: 1, score: 0, alive: true, isYou: false },
+    ],
     alive: 2,
     boundary: 30,
     seed: 0,
@@ -110,10 +111,10 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
               scene().submitSnapshot(snapshotFromRoom(state));
               const snakes = Array.from(state.snakes.values());
               const own = snakes.find((snake) => snake.sessionId === joined.sessionId);
-              const rival = snakes.find((snake) => snake.sessionId !== joined.sessionId);
               setHud({
-                you: own?.score ?? 0,
-                rival: rival?.score ?? 0,
+                players: snakes
+                  .sort((a, b) => a.seat - b.seat)
+                  .map((snake) => ({ seat: snake.seat, score: snake.score, alive: snake.alive, isYou: snake.sessionId === joined.sessionId })),
                 alive: snakes.filter((snake) => snake.alive).length,
                 boundary: state.boundary,
                 seed: state.seed,
@@ -177,8 +178,7 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
       sim = step(sim, inputs);
       scene().submitSnapshot(snapshotFromGame(sim));
       setHud({
-        you: sim.snakes[0].score,
-        rival: sim.snakes[1].score,
+        players: sim.snakes.map((snake, seat) => ({ seat, score: snake.score, alive: snake.alive, isYou: seat === 0 })),
         alive: sim.snakes.filter((snake) => snake.alive).length,
         boundary: sim.bounds.x1 - sim.bounds.x0 + 1,
         seed,
@@ -279,8 +279,8 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
             : 'Get ready'
           : null;
 
-  const isLeading = hud.you > hud.rival;
-  const isTied = hud.you === hud.rival;
+  const you = hud.players.find((player) => player.isYou) ?? hud.players[0];
+  const leadingScore = Math.max(...hud.players.map((player) => player.score), 0);
 
   return (
     <div className="match-shell fixed inset-0 overflow-hidden bg-ink-deep" {...touch}>
@@ -293,19 +293,22 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
           the margins either side of the square field. */}
       <div className="match-overlay">
         <aside className="match-rail">
-          <div className="hud-card-2d rounded-2xl p-2 sm:p-2.5 text-left shadow-md">
-            <div className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-full bg-coral shadow-[0_0_8px_#ff686b]" />
-              <span className="text-[10px] font-black uppercase tracking-wider text-coral-dark">You</span>
-              {isLeading && !isTied && (
-                <span className="ml-auto rounded-full bg-lemon px-1.5 py-0.2 text-[8px] font-black text-ink">
-                  LEAD
-                </span>
-              )}
+          <div className="hud-card-2d w-full max-w-44 rounded-2xl p-2 sm:p-2.5 shadow-md">
+            <div className="mb-1 flex items-center justify-between">
+              <span className="text-[9px] font-black uppercase tracking-wider text-muted">Players</span>
+              <span className="text-[9px] font-black tabular-nums text-muted">{hud.alive}/4 alive</span>
             </div>
-            <b key={hud.you} className="score-pop mt-0.5 block text-2xl sm:text-3xl font-black leading-none tabular-nums text-ink">
-              {hud.you.toLocaleString()}
-            </b>
+            <div className="grid gap-1">
+              {hud.players.map((player) => (
+                <div key={player.seat} className={`flex items-center gap-1.5 rounded-lg px-1.5 py-1 ${player.isYou ? 'bg-coral/15 ring-1 ring-coral/40' : 'bg-ink/5'}`}>
+                  <span className={`grid h-4 w-4 place-items-center rounded-sm text-[8px] font-black ${player.isYou ? 'bg-coral text-ink' : 'bg-teal text-ink'}`}>P{player.seat + 1}</span>
+                  <span className="min-w-0 flex-1 truncate text-[9px] font-black text-ink">{player.isYou ? 'YOU' : `PLAYER ${player.seat + 1}`}</span>
+                  <span className={`font-display text-[13px] font-bold tabular-nums ${player.alive ? 'text-ink' : 'text-muted line-through'}`}>{player.score.toLocaleString()}</span>
+                  {!player.alive && <span className="text-[8px] font-black text-coral-dark">OUT</span>}
+                  {player.score === leadingScore && player.alive && <span className="text-[8px] font-black text-gold-deep">1ST</span>}
+                </div>
+              ))}
+            </div>
           </div>
 
           <div className="hud-card-dark rounded-2xl px-3 py-1.5 text-center text-white shadow-md">
@@ -326,19 +329,9 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
         <div className="match-frame" />
 
         <aside className="match-rail items-end">
-          <div className="hud-card-2d rounded-2xl p-2 sm:p-2.5 text-right shadow-md">
-            <div className="flex items-center justify-end gap-1.5">
-              {!isLeading && !isTied && (
-                <span className="mr-auto rounded-full bg-teal px-1.5 py-0.2 text-[8px] font-black text-ink">
-                  LEAD
-                </span>
-              )}
-              <span className="text-[10px] font-black uppercase tracking-wider text-grass-deep">Rival</span>
-              <span className="h-2.5 w-2.5 rounded-full bg-teal shadow-[0_0_8px_#35c982]" />
-            </div>
-            <b key={hud.rival} className="score-pop mt-0.5 block text-2xl sm:text-3xl font-black leading-none tabular-nums text-ink">
-              {hud.rival.toLocaleString()}
-            </b>
+          <div className="hud-card-2d hidden rounded-2xl px-3 py-2 text-right shadow-md @2xl:block">
+            <span className="block text-[9px] font-black uppercase tracking-wider text-muted">Your score</span>
+            <b key={you?.score} className="score-pop font-display mt-0.5 block text-2xl font-bold leading-none tabular-nums text-ink">{(you?.score ?? 0).toLocaleString()}</b>
           </div>
 
           {!result && (
