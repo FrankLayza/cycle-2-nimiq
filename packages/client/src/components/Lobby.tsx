@@ -109,19 +109,8 @@ export function Lobby({ wallet, onConnectWallet, onPlay, onPvp, onToday, onCreat
         )}
       </header>
 
-      {/* Body: the arena on the left, the ways into it on the right. Capped and
-          centred so a tall desktop window reads as a composed block rather than a
-          phone layout adrift in empty space. */}
-      <div className="lobby-content mx-auto flex min-h-0 w-full max-w-6xl flex-1 items-center gap-8 @2xl:gap-12">
-        {/* The arena at rest — same turf and same dashed boundary marker as the
-            live field. Dropped on very short or narrow viewports, where the
-            actions need the room more than the preview does. */}
-        <div
-          className="turf-panel turf-panel-preview hidden aspect-square h-full max-h-40 shrink-0 rounded-xl opacity-45 @2xl:block @4xl:max-h-52"
-          aria-hidden="true"
-        />
-
-        <div className="flex min-w-0 flex-1 flex-col gap-4">
+      <div className="lobby-content mx-auto flex min-h-0 w-full max-w-4xl flex-1 items-center justify-center">
+        <div className="flex min-w-0 flex-1 flex-col gap-4 text-center">
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.18em] text-lemon">
             <span className="h-2 w-2 rounded-full bg-lemon" />
             Four seats. One rink.
@@ -170,7 +159,7 @@ export function Lobby({ wallet, onConnectWallet, onPlay, onPvp, onToday, onCreat
             </button>
           </div>
 
-          <p className="m-0 max-w-md text-sm font-bold leading-relaxed text-white/60">
+          <p className="m-0 mx-auto max-w-md text-sm font-bold leading-relaxed text-white/60">
             A fast arena match where every turn closes the rink around you.
           </p>
         </div>

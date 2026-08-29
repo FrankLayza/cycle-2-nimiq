@@ -43,7 +43,7 @@
   height: 0.35rem;
   background: var(--color-coral);
   content: '';
-  z-index: -1;
+  pointer-events: none;
 }
 
 .lobby-content { position: relative; }
