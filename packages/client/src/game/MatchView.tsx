@@ -5,6 +5,7 @@ import type { Room } from 'colyseus.js';
 import { MatchScene } from './MatchScene';
 import { createMatchGame } from './createMatchGame';
 import { formatMatchClock, isStillShrinking, shrinkSecondsRemaining } from './matchHud';
+import { PixelIcon } from '../components/PixelIcon';
 import { snapshotFromGame, snapshotFromRoom } from './renderState';
 import { useKeyboardControls } from './useKeyboard';
 import { useTouchControls } from './useTouchControls';
@@ -398,11 +399,21 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
       {result && (
         <div className="result-backdrop fixed inset-0 z-20 grid place-items-center bg-ink/65 p-5 text-center backdrop-blur-xs">
           <div className="result-panel w-full max-w-sm rounded-3xl border-2 border-white/85 bg-cream p-6 shadow-2xl sm:p-8">
-            <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl shadow-inner text-3xl">
-              {result.outcome === 'win' ? '🏆' : result.outcome === 'loss' ? '💔' : '🤝'}
+            {/* Outcome reads as a word plus a direction, not a platform emoji —
+                emoji render differently on every OS and undercut the custom art. */}
+            <div
+              className={`mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl shadow-inner ${
+                result.outcome === 'win'
+                  ? 'bg-teal text-ink'
+                  : result.outcome === 'loss'
+                    ? 'bg-coral text-ink'
+                    : 'bg-lemon text-ink'
+              }`}
+            >
+              <PixelIcon name={result.outcome} size={30} />
             </div>
-            <h2 className="result-hero m-0 text-3xl sm:text-4xl font-black text-ink">
-              {result.outcome === 'win' ? 'Victory!' : result.outcome === 'loss' ? 'Rival Wins' : 'Draw Match'}
+            <h2 className="result-hero m-0 text-3xl font-black text-ink sm:text-4xl">
+              {result.outcome === 'win' ? 'You won' : result.outcome === 'loss' ? 'Rival wins' : 'Draw'}
             </h2>
 
             <div className="result-score my-4 rounded-2xl border border-line bg-card p-4 shadow-sm">
@@ -434,14 +445,14 @@ export function MatchView({ onExit, onRematch, mode = 'bot', roomCode, wallet }:
                 onClick={() => void shareResult()}
                 disabled={sharing}
               >
-                {sharing ? 'Sharing…' : 'Share Score 📤'}
+                {sharing ? 'Sharing…' : 'Share score'}
               </button>
               <button
                 type="button"
                 className="btn-3d btn-3d-white min-h-12 rounded-xl text-xs font-black"
                 onClick={onExit}
               >
-                Lobby 🏠
+                Lobby
               </button>
             </div>
             {shareNote && <p className="m-0 mt-3 text-xs font-bold text-grass-deep" role="status">{shareNote}</p>}

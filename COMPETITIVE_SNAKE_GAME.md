@@ -52,10 +52,11 @@
 
 ## 4. Viewport, Orientation & UI
 
-- **Orientation:** full landscape view inside Nimiq Pay's portrait-locked container using a **CSS-rotated viewport** (`transform: rotate(90deg)` in `@media (orientation: portrait)`).
-- **Canvas:** centered 16:9 arena. **Left thumb:** on-screen D-pad + swipe zone. **Right thumb:** large Boost button.
-- **Top header:** pot/reward value, alive player count, shrink timer.
-- **Fallback:** auto-adapts to normal landscape in desktop/external browsers.
+- **Orientation:** full landscape presentation. `screen.orientation.lock('landscape')` is attempted but cannot be relied on (unimplemented in iOS Safari, needs fullscreen elsewhere), so the shell falls back to a **CSS-rotated viewport** (`rotate(90deg) translateY(-100%)`) on coarse-pointer devices held in portrait. `swipeToDir` carries the matching inverse mapping.
+- **Canvas:** the canvas fills the stage and centres a **square** arena inside it (the grid is 30×30, so it cannot be 16:9 without distorting or cropping play). The field fills the width in portrait and the height in landscape; the margins either side in landscape carry the HUD rails.
+- **Controls (D46):** no on-screen d-pad or boost button. **Touch:** swipe anywhere to steer, press and hold the **right half** of the screen to boost. **Keyboard:** WASD/arrows to turn, space to boost. A control hint shows until the first turn.
+- **Top header:** per-seat score rails, match clock, shrink timer (hidden once the arena reaches `MIN_BOUND`).
+- **Fallback:** auto-adapts to normal landscape in desktop/external browsers; narrow desktop windows are never rotated.
 
 ---
 
@@ -167,8 +168,9 @@
 | D42 | **PvP room joins must be StrictMode-safe:** defer the client Colyseus join until the mount survives React's development effect probe, preventing one creator from opening two seats and auto-starting their own room. | ✅ Done |
 | D43 | **UI polish pass:** preserve the render-only Phaser boundary while upgrading the responsive Lawn League landing page, unifying PvP/Today's Run match framing and mobile control docks, adding restrained 2.5D lawn depth/contact shadows, and strengthening pickup, boost, and shrink feedback. No sim, room, wallet, or reward behavior changes. | ✅ Done |
 | D44 | **PvP capacity:** matches support 2–4 active players. Lobby/countdown joins fill available seats; no connection joins as a spectator. A player who dies remains connected and observes the surviving players until the match ends. | ✅ Done |
-| D45 | **Art direction is pixel art, sourced from CC0 asset packs — supersedes the procedural-layers clause of D43.** The field is tiled from Kenney "Tiny Town" (16px, CC0); snakes and pickups follow as pixel sprites. Rationale: the procedural lawn drew mow stripes one per gameplay column, making the 30×30 lattice the most prominent thing on screen, and hand-rolled vector bevels could not produce texture or material. Phaser stays render-only (the D43 boundary is unchanged) and rendering switches to `pixelArt` (nearest-neighbour). Only CC0/CC-BY assets may be vendored — never CC-BY-SA or GPL, which would conflict with the MIT licence; provenance is recorded in `packages/client/src/assets/ATTRIBUTION.md`. | 🟡 In progress |
+| D45 | **Room connection hardening:** simulation-tick patch cadence, malformed-input rejection, bounded reconnection, deterministic disconnect forfeits, duplicate-code protection, start locking, and unanimous rematch confirmation. | ✅ Done |
 | D46 | **Landscape-first, gesture-only play:** the app presents in landscape (native orientation lock where honoured, CSS rotation otherwise, since the lock is unavailable in the Nimiq Pay WebView). The on-screen d-pad and boost button are removed: touch steers by swipe and boosts by holding the right half of the screen; desktop keeps WASD/arrows and space. The arena stays a fully-visible square and the HUD moves into the landscape margins, still overlaying the canvas absolutely per D11. Known trade-off: swipe-only removes the sole non-gesture touch input, which is an accessibility regression to revisit. | ✅ Done |
+| D47 | **Art direction is pixel art, sourced from CC0 asset packs — supersedes the procedural-layers clause of D43.** The field is tiled from Kenney "Tiny Town" (16px, CC0); snakes and pickups follow as pixel sprites. Rationale: the procedural lawn drew mow stripes one per gameplay column, making the 30×30 lattice the most prominent thing on screen, and hand-rolled vector bevels could not produce texture or material. Phaser stays render-only (the D43 boundary is unchanged) and rendering switches to `pixelArt` (nearest-neighbour). Only CC0/CC-BY assets may be vendored — never CC-BY-SA or GPL, which would conflict with the MIT licence; provenance is recorded in `packages/client/src/assets/ATTRIBUTION.md`. | 🟡 In progress |
 
 ---
 

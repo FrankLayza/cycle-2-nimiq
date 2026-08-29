@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { normalizeRoomCode } from '../net/client';
+import { PixelIcon } from './PixelIcon';
 
 interface Props {
   wallet: { address: string } | null;
@@ -11,6 +12,23 @@ interface Props {
   roomError?: string;
 }
 
+/**
+ * Lobby — the pitch at rest.
+ *
+ * This is a mini app launched from inside a wallet, not a website: the player has
+ * already chosen to be here, so the screen's whole job is to start a match. The
+ * previous version was shaped like a marketing landing page — a hero pitch, a
+ * symmetric three-column stat grid ("1v1 / 60s / NIM"), and a "League Guarantee"
+ * card — which sold a product the player had already bought, and whose "1v1"
+ * claim had gone stale under D44's 2-4 player rooms.
+ *
+ * It also drew its own snakes in CSS, with gradient shading and highlighted eyes.
+ * That was a third art language, and it contradicted the pixel field the player
+ * saw two seconds later. The background is now the same Kenney turf as the match,
+ * so the menu and the game are visibly one object.
+ *
+ * Structure follows the three things a player can actually do. Nothing else.
+ */
 export function Lobby({ wallet, onConnectWallet, onPlay, onPvp, onToday, onCreateRoom, roomError }: Props) {
   const params = new URLSearchParams(window.location.search);
   const [code, setCode] = useState(normalizeRoomCode(params.get('room') ?? ''));
@@ -19,11 +37,9 @@ export function Lobby({ wallet, onConnectWallet, onPlay, onPvp, onToday, onCreat
   const codeInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    if (open) {
-      codeInputRef.current?.focus({ preventScroll: false });
-      // Scroll into view on mobile if needed
-      codeInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
+    if (!open) return;
+    codeInputRef.current?.focus({ preventScroll: false });
+    codeInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }, [open]);
 
   useEffect(() => {
@@ -40,264 +56,219 @@ export function Lobby({ wallet, onConnectWallet, onPlay, onPvp, onToday, onCreat
         /* Keep the landing screen honest when the server is unavailable. */
       }
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [wallet]);
 
+  // Streak is real data the lobby already fetched but used to bury in the footer.
+  // It belongs on the mode it describes, where it is a reason to tap.
+  const dailyDetail = !wallet
+    ? 'Daily seeded solo run · connect to record a streak'
+    : streak === null
+      ? 'Daily seeded solo run · start your streak'
+      : streak === 0
+        ? 'Daily seeded solo run · no streak yet'
+        : `Daily seeded solo run · ${streak} day${streak === 1 ? '' : 's'} running`;
+
   return (
-    <main className="lobby-shell mx-auto flex min-h-full w-full max-w-6xl flex-col px-5 py-6 sm:py-8 lg:px-10 pb-16">
-      {/* Top Header */}
-      <header className="lobby-header flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="btn-3d btn-3d-teal h-12 w-12 rounded-2xl text-2xl font-black text-ink" aria-hidden="true">
-            S
-          </div>
-          <div>
-            <p className="m-0 text-[11px] font-black uppercase tracking-[0.2em] text-grass-deep">Lawn League</p>
-            <h1 className="m-0 text-xl font-black leading-tight tracking-tight text-ink">Competitive Snake</h1>
-          </div>
-        </div>
-        {wallet ? (
-          <div
-            className="flex items-center gap-2 rounded-full border border-line bg-card px-4 py-2 text-xs font-bold text-ink shadow-xs"
-            title={wallet.address}
-          >
-            <span className="h-2.5 w-2.5 rounded-full bg-teal shadow-[0_0_8px_#35c982]" />
-            <span>{wallet.address.slice(0, 6)}...{wallet.address.slice(-4)}</span>
-          </div>
-        ) : (
-          <button
-            type="button"
-            className="btn-3d btn-3d-white rounded-full px-5 py-2.5 text-xs font-black"
-            onClick={onConnectWallet}
-          >
-            Connect Wallet
-          </button>
-        )}
-      </header>
+    <main className="turf-surface flex h-full min-h-0 w-full flex-col overflow-hidden">
+      <div className="turf-scrim" aria-hidden="true" />
 
-      {/* Hero Section with 2.5D Stadium Visual */}
-      <section className="lobby-stage mt-7 grid gap-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(20rem,0.85fr)] lg:items-center lg:gap-12">
-        {/* 2.5D Lawn Arena Illustration */}
-        <div className="lobby-visual-3d relative h-64 sm:h-80 lg:h-[27rem] w-full rounded-[2.25rem] p-6">
-          <div className="lobby-sun-glow" aria-hidden="true" />
-          <div className="pitch-rim-3d" aria-hidden="true" />
-
-          {/* 3D Snakes & Pellets */}
-          <div className="relative h-full w-full max-w-[480px] mx-auto">
-            {/* Coral Snake */}
-            <div className="character-snake-3d character-snake-coral-3d left-4 sm:left-10 bottom-8 sm:bottom-12 -rotate-6">
-              <i /><i /><i /><i />
-              <b>
-                <span className="eye eye-left" />
-                <span className="eye eye-right" />
-              </b>
-            </div>
-
-            {/* Teal Snake */}
-            <div className="character-snake-3d character-snake-teal-3d right-4 sm:right-10 top-6 sm:top-10 rotate-12 flex-row-reverse">
-              <i /><i /><i />
-              <b>
-                <span className="eye eye-left" />
-                <span className="eye eye-right" />
-              </b>
-            </div>
-
-            {/* Floating 3D Golden Pellet */}
-            <div className="floating-pickup-3d left-1/2 top-[46%]" aria-hidden="true" />
-          </div>
-
-          {/* 2.5D Visual Caption Badge */}
-          <div className="absolute bottom-4 left-0 right-0 flex items-center justify-center gap-3">
-            <span className="rounded-full bg-ink/75 px-4 py-1.5 text-[11px] font-black uppercase tracking-widest text-white shadow-xs backdrop-blur-xs">
-              ★ 1v1 Skill League ★
-            </span>
-          </div>
-        </div>
-
-        {/* Hero Text & Primary CTA */}
-        <div className="lobby-hero text-left">
-          <div className="inline-flex items-center gap-2 rounded-full bg-coral-soft/50 border border-coral-dark/20 px-3.5 py-1 text-xs font-black uppercase tracking-[0.16em] text-coral-deep">
-            <span className="h-2 w-2 rounded-full bg-coral animate-pulse" />
-            Live 60-second battles
-          </div>
-          <h2 className="mt-3 text-4xl font-black leading-[0.96] tracking-tight sm:text-5xl lg:text-6xl text-ink">
-            Grow. Boost.<br />Outplay.
-          </h2>
-          <p className="mt-4 max-w-md text-base leading-relaxed text-muted font-medium">
-            Fast-paced, server-verified snake battles where Nimiq wallet proves your skill and identity on-chain.
-          </p>
-
-          {/* 2.5D Stat Pillars */}
-          <div className="mt-6 grid max-w-md grid-cols-3 gap-3 rounded-2xl border border-line bg-card/70 p-3.5 text-center shadow-xs backdrop-blur-xs">
-            <div className="border-r border-line/80 pr-2">
-              <b className="block text-xl font-black text-ink">1v1</b>
-              <span className="text-[10px] font-black uppercase tracking-wider text-muted">Arcade Battle</span>
-            </div>
-            <div className="border-r border-line/80 pr-2">
-              <b className="block text-xl font-black text-ink">60s</b>
-              <span className="text-[10px] font-black uppercase tracking-wider text-muted">Match Speed</span>
-            </div>
-            <div>
-              <b className="block text-xl font-black text-gold-deep">NIM</b>
-              <span className="text-[10px] font-black uppercase tracking-wider text-muted">Proof of Skill</span>
-            </div>
-          </div>
-
-          <div className="mt-6 flex flex-col gap-2 max-w-md">
-            <button
-              type="button"
-              className="btn-3d btn-3d-coral min-h-16 w-full rounded-2xl text-2xl tracking-wide shadow-md"
-              onClick={onPlay}
+      <div className="relative z-10 flex h-full min-h-0 flex-col gap-3 overflow-y-auto px-4 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:px-10">
+        {/* Header */}
+        <header className="flex shrink-0 items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border-2 border-ink/15 bg-card text-base font-black text-ink shadow-xs"
+              aria-hidden="true"
             >
-              PLAY NOW
-            </button>
-            <p className="mt-1 text-center text-xs font-bold text-muted">
-              Free play · Instant local bot match · No wallet required
-            </p>
+              S
+            </div>
+            <div className="leading-tight">
+              <p className="m-0 text-[10px] font-black uppercase tracking-[0.18em] text-grass-deep">
+                Nimiq Mini App
+              </p>
+              <h1 className="m-0 text-base font-black tracking-tight text-ink sm:text-lg">Competitive Snake</h1>
+            </div>
           </div>
-        </div>
-      </section>
 
-      {/* Mode Selection Cards */}
-      <section className="lobby-modes mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {/* Play a friend */}
-        <button
-          type="button"
-          className="card-2d flex min-h-28 items-center gap-4 p-5 text-left transition-transform"
-          onClick={() => setOpen((prev) => !prev)}
-        >
-          <div className="btn-3d btn-3d-teal h-14 w-14 shrink-0 rounded-2xl text-2xl font-black text-ink">
-            +
-          </div>
-          <div>
-            <span className="block text-lg font-black text-ink">Play a Friend</span>
-            <span className="mt-0.5 block text-xs font-semibold leading-relaxed text-muted">
-              Private 4-letter room code PvP
-            </span>
-          </div>
-        </button>
-
-        {/* Today's Run */}
-        <button
-          type="button"
-          className="card-2d flex min-h-28 items-center gap-4 p-5 text-left transition-transform"
-          onClick={onToday}
-        >
-          <div className="btn-3d btn-3d-lemon h-14 w-14 shrink-0 rounded-2xl text-2xl font-black text-ink">
-            ★
-          </div>
-          <div>
-            <span className="block text-lg font-black text-ink">Today&apos;s Run</span>
-            <span className="mt-0.5 block text-xs font-semibold leading-relaxed text-muted">
-              Daily seeded solo challenge & streak
-            </span>
-          </div>
-        </button>
-
-        {/* League Promise */}
-        <div className="card-2d-dark flex min-h-28 flex-col justify-center p-5 shadow-sm sm:col-span-2 lg:col-span-1">
-          <div className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-teal shadow-[0_0_8px_#35c982]" />
-            <span className="text-[11px] font-black uppercase tracking-widest text-teal-soft">League Guarantee</span>
-          </div>
-          <span className="mt-2 block text-sm font-black leading-snug text-white">
-            Pure skill. Deterministic sim. Verified replays & team-seeded rewards.
-          </span>
-        </div>
-      </section>
-
-      {/* Expandable 2.5D Room Code Form */}
-      {open && (
-        <section className="room-form screen-enter mt-4 max-w-2xl rounded-3xl border-2 border-teal/40 bg-card p-5 shadow-lg">
-          <div className="flex items-center justify-between pb-3 border-b border-line">
-            <h3 className="m-0 text-base font-black text-ink flex items-center gap-2">
-              <span className="h-3 w-3 rounded-full bg-teal" />
-              Private Room PvP
-            </h3>
-            <button
-              type="button"
-              className="text-xs font-bold text-muted hover:text-ink px-2 py-1"
-              onClick={() => setOpen(false)}
+          {wallet ? (
+            <div
+              className="flex items-center gap-2 rounded-full border border-line bg-card/95 px-3 py-1.5 text-[11px] font-bold text-ink shadow-xs"
+              title={wallet.address}
             >
-              Close ✕
-            </button>
-          </div>
-
-          <form
-            className="mt-4 flex flex-col sm:flex-row gap-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              if (code.length === 4) onPvp(code);
-            }}
-          >
-            <div className="relative flex-1">
-              <input
-                ref={codeInputRef}
-                value={code}
-                onChange={(event) =>
-                  setCode(
-                    event.target.value
-                      .toUpperCase()
-                      .replace(/[^0-9A-HJ-KM-NP-TV-Z]/g, '')
-                      .slice(0, 4)
-                  )
-                }
-                maxLength={4}
-                placeholder="ABCD"
-                aria-label="Room code"
-                className="h-14 w-full rounded-2xl border-2 border-line bg-cream px-4 text-center text-2xl font-black tracking-[0.4em] text-ink outline-hidden focus:border-teal transition-colors shadow-inner"
-              />
-              <span className="pointer-events-none absolute left-3 top-1 text-[9px] font-black uppercase tracking-widest text-muted">
-                Room Code
+              <span className="h-2 w-2 rounded-full bg-teal" />
+              <span className="tabular-nums">
+                {wallet.address.slice(0, 6)}…{wallet.address.slice(-4)}
               </span>
             </div>
+          ) : (
+            <button
+              type="button"
+              className="btn-3d btn-3d-white rounded-full px-4 py-2 text-[11px] font-black"
+              onClick={onConnectWallet}
+            >
+              Connect Wallet
+            </button>
+          )}
+        </header>
+
+        {/* Body: the ask on the left, the alternatives on the right. Landscape-first,
+            because the shell presents landscape on touch devices. */}
+        <div className="grid min-h-0 flex-1 items-center gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)] lg:gap-10">
+          <section>
+            <h2 className="m-0 text-[1.75rem] font-black leading-[0.95] tracking-tight text-ink sm:text-4xl lg:text-5xl">
+              Up to four snakes,
+              <br />
+              one shrinking arena.
+            </h2>
+            <p className="mt-2.5 max-w-sm text-sm font-medium leading-relaxed text-ink/70 sm:text-base">
+              Every match runs on a shared seed, so the arena is identical for all players and the
+              result can be replayed and checked.
+            </p>
 
             <button
-              type="submit"
-              className="btn-3d btn-3d-teal h-14 px-8 rounded-2xl text-base font-black text-ink disabled:opacity-45 disabled:cursor-not-allowed disabled:shadow-none"
-              disabled={code.length !== 4}
+              type="button"
+              className="btn-3d btn-3d-coral mt-4 min-h-14 w-full max-w-sm rounded-2xl text-xl tracking-wide shadow-md sm:min-h-16 sm:text-2xl"
+              onClick={onPlay}
             >
-              Join Match
+              Quick Match
             </button>
-          </form>
+            <p className="mt-2 max-w-sm text-center text-[11px] font-bold text-ink/60">
+              Against a bot · starts immediately · no wallet needed
+            </p>
+          </section>
 
-          <div className="mt-4 flex items-center gap-3">
-            <div className="h-px flex-1 bg-line" />
-            <span className="text-xs font-black uppercase tracking-wider text-muted">or</span>
-            <div className="h-px flex-1 bg-line" />
-          </div>
+          {/* The other two modes. Two rows, because there are two — not a
+              symmetric grid padded out to look balanced. */}
+          <section className="flex shrink-0 flex-col gap-2.5">
+            <button
+              type="button"
+              className="card-2d flex items-center gap-3.5 p-4 text-left"
+              onClick={() => setOpen((prev) => !prev)}
+              aria-expanded={open}
+            >
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-teal text-ink shadow-xs">
+                <PixelIcon name="friends" size={22} />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-base font-black text-ink">Play a Friend</span>
+                <span className="mt-0.5 block text-[11px] font-semibold leading-snug text-muted">
+                  Private room code · 2–4 players
+                </span>
+              </span>
+            </button>
 
-          <button
-            type="button"
-            className="btn-3d btn-3d-white mt-3 h-12 w-full rounded-2xl text-sm font-black text-ink"
-            onClick={onCreateRoom}
-          >
-            Create a New Room
-          </button>
+            <button type="button" className="card-2d flex items-center gap-3.5 p-4 text-left" onClick={onToday}>
+              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-lemon text-ink shadow-xs">
+                <PixelIcon name="daily" size={22} />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-base font-black text-ink">Today&apos;s Run</span>
+                <span className="mt-0.5 block text-[11px] font-semibold leading-snug text-muted">
+                  {dailyDetail}
+                </span>
+              </span>
+            </button>
 
-          {roomError && (
-            <div className="mt-3 rounded-xl bg-coral-soft/50 border border-coral-dark/20 p-3 text-center text-xs font-bold text-coral-deep" role="alert">
-              {roomError}
-            </div>
-          )}
-        </section>
-      )}
+            {open && (
+              <div className="room-form screen-enter rounded-2xl border-2 border-teal/40 bg-card p-4 shadow-lg">
+                <div className="flex items-center justify-between gap-2 border-b border-line pb-2.5">
+                  <h3 className="m-0 text-sm font-black text-ink">Join a private room</h3>
+                  <button
+                    type="button"
+                    className="grid h-7 w-7 place-items-center rounded-lg text-muted transition-colors duration-150 hover:bg-cream-deep hover:text-ink"
+                    onClick={() => setOpen(false)}
+                    aria-label="Close room code form"
+                  >
+                    <PixelIcon name="close" size={14} />
+                  </button>
+                </div>
 
-      {/* Footer */}
-      <footer className="lobby-footer mt-8 flex flex-wrap items-center justify-between gap-3 border-t border-line/70 pt-5 text-xs font-bold text-muted">
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-grass" />
-          <span>
-            {!wallet
-              ? 'Connect wallet to record daily streaks'
-              : streak === null
-                ? 'Play Today\'s Run to start your streak'
-                : `🔥 ${streak} day${streak === 1 ? '' : 's'} streak active`}
-          </span>
+                <form
+                  className="mt-3 flex flex-col gap-2.5 sm:flex-row"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    if (code.length === 4) onPvp(code);
+                  }}
+                >
+                  <div className="flex-1">
+                    <label
+                      className="block text-[9px] font-black uppercase tracking-widest text-muted"
+                      htmlFor="room-code"
+                    >
+                      Room code
+                    </label>
+                    <input
+                      id="room-code"
+                      ref={codeInputRef}
+                      value={code}
+                      onChange={(event) =>
+                        setCode(
+                          event.target.value
+                            .toUpperCase()
+                            .replace(/[^0-9A-HJ-KM-NP-TV-Z]/g, '')
+                            .slice(0, 4)
+                        )
+                      }
+                      maxLength={4}
+                      placeholder="ABCD"
+                      autoComplete="off"
+                      spellCheck={false}
+                      inputMode="text"
+                      className="mt-1 h-12 w-full rounded-xl border-2 border-line bg-cream px-3 text-center text-xl font-black tracking-[0.4em] text-ink shadow-inner outline-hidden transition-colors duration-150 focus:border-teal"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="btn-3d btn-3d-teal mt-auto h-12 shrink-0 rounded-xl px-6 text-sm font-black text-ink disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none"
+                    disabled={code.length !== 4}
+                  >
+                    Join
+                  </button>
+                </form>
+
+                {/* Codes are Crockford base32, so I, L, O and U are excluded. The
+                    input silently strips them, which reads as a broken keyboard
+                    unless it is said out loud. */}
+                <p className="mt-2 text-[10px] font-semibold text-muted">
+                  Four characters. No I, L, O or U — they are left out so codes cannot be misread.
+                </p>
+
+                <button
+                  type="button"
+                  className="btn-3d btn-3d-white mt-3 h-11 w-full rounded-xl text-xs font-black text-ink"
+                  onClick={onCreateRoom}
+                >
+                  Create a room instead
+                </button>
+
+                {roomError && (
+                  <p
+                    className="m-0 mt-2.5 rounded-xl border border-coral-dark/20 bg-coral-soft/50 p-2.5 text-center text-[11px] font-bold text-coral-deep"
+                    role="alert"
+                  >
+                    {roomError}
+                  </p>
+                )}
+              </div>
+            )}
+          </section>
         </div>
-        <span>Verified on-chain · No house betting</span>
-      </footer>
+
+        {/* Footer */}
+        <footer className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-1.5 border-t border-ink/10 pt-2.5 text-[10px] font-bold text-ink/60">
+          <span className="flex items-center gap-1.5">
+            {wallet && streak !== null && streak > 0 && (
+              <PixelIcon name="streak" size={12} className="text-grass-deep" />
+            )}
+            <span>Rewards come from a team-seeded pool · the house never holds player funds</span>
+          </span>
+          <span>Deterministic sim · replay-verified</span>
+        </footer>
+      </div>
     </main>
   );
 }
-

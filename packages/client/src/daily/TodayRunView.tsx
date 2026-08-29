@@ -8,6 +8,7 @@ import type { ResponsiveGame } from '../game/createMatchGame';
 import { snapshotFromGame } from '../game/renderState';
 import { useKeyboardControls } from '../game/useKeyboard';
 import { useTouchControls } from '../game/useTouchControls';
+import { PixelIcon } from '../components/PixelIcon';
 
 interface Props {
   wallet: { address: string } | null;
@@ -263,7 +264,8 @@ export function TodayRunView({ wallet, onExit }: Props) {
           <>
             <section className="daily-hero mt-6 text-center">
               <div className="inline-flex items-center gap-2 rounded-full bg-lemon-soft border border-lemon-dark/20 px-4 py-1 text-xs font-black uppercase tracking-widest text-gold-deep">
-                ★ {displayDate(challenge.date)} Seeded Field ★
+                <PixelIcon name="daily" size={13} />
+                {displayDate(challenge.date)} Seeded Field
               </div>
               <h1 className="mt-3 text-4xl sm:text-5xl font-black tracking-tight text-ink">Today&apos;s Run</h1>
               <p className="mx-auto mt-2 max-w-sm text-base font-semibold leading-relaxed text-muted">
@@ -345,8 +347,8 @@ export function TodayRunView({ wallet, onExit }: Props) {
         {phase === 'verified' && result && (
           <section className="status-pop grid flex-1 place-items-center py-8 text-center my-auto">
             <div className="w-full">
-              <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-2xl bg-teal-soft text-3xl shadow-inner">
-                ✨
+              <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-2xl bg-teal-soft text-teal-deep shadow-inner">
+                <PixelIcon name="win" size={30} />
               </div>
               <p className="text-xs font-black uppercase tracking-widest text-grass-deep">Score Verified on Replay</p>
               <h1 className="mt-2 text-5xl font-black tabular-nums text-ink">{result.score.toLocaleString()}</h1>

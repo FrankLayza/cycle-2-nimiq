@@ -293,6 +293,45 @@
   transform: translateY(3px);
 }
 
+/* Turf surface — the lobby is the pitch at rest.
+   Same Kenney tiles as the match field, so the menu and the game read as one
+   object instead of two art styles. This replaced a CSS faux-3D snake
+   illustration with gradient-shaded segments and eyes, which was a third art
+   language and directly contradicted the pixel field the player saw seconds
+   later.
+   `turf-patch.png` is a 4x4 tile composition generated from the same LCG and
+   weights as `game/turf.ts`, so it repeats rarely enough to hide the 16px grid,
+   and it costs 572 bytes rather than the 1.2 MB Phaser chunk a live field would
+   pull onto first paint. */
+.turf-surface {
+  position: relative;
+  background-color: var(--color-grass);
+  background-image: url('./assets/turf-patch.png');
+  background-repeat: repeat;
+  /* 2x nearest-neighbour: each 16px source tile lands on 32 device-independent px. */
+  background-size: 128px 128px;
+  image-rendering: pixelated;
+}
+
+/* Legibility scrim. Light, not dark — the Fresh Rink identity is a warm daylight
+   palette (D21/D41), so the turf stays sunlit and the cream panels lift off it. */
+.turf-surface > .turf-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 120% 80% at 50% -10%, rgb(245 243 238 / 82%) 0%, rgb(245 243 238 / 40%) 45%, transparent 78%),
+    linear-gradient(180deg, transparent 55%, rgb(14 22 36 / 32%) 100%);
+}
+
+/* Pixel-grid icons. Drawn on the same 16px lattice as the tiles, with
+   crisp edges and no curves, so iconography shares the field's geometry. */
+.pixel-icon {
+  display: block;
+  shape-rendering: crispEdges;
+}
+
 /* In-game HUD glass cards */
 .hud-card-2d {
   background: linear-gradient(135deg, rgb(255 255 255 / 94%) 0%, rgb(255 255 255 / 85%) 100%);
@@ -343,156 +382,6 @@
 }
 
 
-/* 2.5D Animated Lobby Visual */
-.lobby-visual-3d {
-  position: relative;
-  overflow: hidden;
-  background:
-    radial-gradient(ellipse at 80% 20%, rgb(247 224 77 / 25%) 0%, transparent 45%),
-    linear-gradient(145deg, #e4f5d8 0%, #c4e6ac 60%, #9dd481 100%);
-  border: 2px solid rgb(255 255 255 / 85%);
-  box-shadow: 0 16px 36px rgb(49 95 36 / 15%), inset 0 2px 6px rgb(255 255 255 / 80%);
-}
-
-.pitch-rim-3d {
-  position: absolute;
-  inset: 12% 6% 12%;
-  border-radius: 46% 54% 48% 52%;
-  border: 4px solid rgb(255 255 255 / 45%);
-  box-shadow:
-    inset 0 10px 22px rgb(24 61 34 / 30%),
-    0 8px 24px rgb(24 61 34 / 20%);
-  background:
-    repeating-linear-gradient(90deg, rgb(126 204 95 / 45%) 0px, rgb(126 204 95 / 45%) 28px, rgb(86 153 61 / 50%) 28px, rgb(86 153 61 / 50%) 56px);
-  transform: rotate(-5deg);
-}
-
-.pitch-rim-3d::after {
-  content: '';
-  position: absolute;
-  inset: 22%;
-  border: 2px dashed rgb(255 255 255 / 40%);
-  border-radius: 50%;
-}
-
-
-.lobby-sun-glow {
-  position: absolute;
-  right: 10%;
-  top: 8%;
-  width: 96px;
-  height: 96px;
-  border-radius: 50%;
-  background: radial-gradient(circle, #fff07d 0%, #f7e04d 60%, rgb(247 224 77 / 0%) 100%);
-  filter: blur(4px);
-  animation: sun-pulse 4s ease-in-out infinite alternate;
-}
-
-@keyframes sun-pulse {
-  0% { transform: scale(0.95); opacity: 0.8; }
-  100% { transform: scale(1.1); opacity: 1; }
-}
-
-/* Floating 3D Pickups */
-.floating-pickup-3d {
-  position: absolute;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 25%, #fff280 0%, #f7e04d 55%, #d6be28 100%);
-  box-shadow: 0 4px 0 #b39b15, 0 8px 16px rgb(214 190 40 / 35%);
-  animation: pickup-float 2.6s ease-in-out infinite alternate;
-}
-
-.floating-pickup-3d::after {
-  content: '';
-  position: absolute;
-  bottom: -14px;
-  left: 15%;
-  width: 70%;
-  height: 6px;
-  border-radius: 50%;
-  background: rgb(24 61 34 / 25%);
-  animation: shadow-float 2.6s ease-in-out infinite alternate;
-}
-
-@keyframes pickup-float {
-  0% { transform: translate(-50%, -50%) translateY(0); }
-  100% { transform: translate(-50%, -50%) translateY(-10px); }
-}
-
-@keyframes shadow-float {
-  0% { transform: scale(1); opacity: 0.35; }
-  100% { transform: scale(0.65); opacity: 0.15; }
-}
-
-/* 2.5D Snake Characters */
-.character-snake-3d {
-  position: absolute;
-  display: flex;
-  align-items: center;
-  animation: character-breathe 2.4s var(--ease-in-out) infinite;
-}
-
-.character-snake-3d i {
-  display: block;
-  width: 32px;
-  height: 32px;
-  margin-left: -6px;
-  border-radius: 50%;
-  box-shadow:
-    inset 0 4px 6px rgb(255 255 255 / 45%),
-    inset 0 -4px 6px rgb(0 0 0 / 20%),
-    0 6px 12px rgb(24 61 34 / 28%);
-}
-
-.character-snake-3d b {
-  position: relative;
-  display: block;
-  width: 42px;
-  height: 42px;
-  margin-left: -4px;
-  border-radius: 50%;
-  box-shadow:
-    inset 0 6px 8px rgb(255 255 255 / 55%),
-    inset 0 -5px 8px rgb(0 0 0 / 25%),
-    0 8px 16px rgb(24 61 34 / 32%);
-}
-
-.character-snake-3d b .eye {
-  position: absolute;
-  top: 9px;
-  width: 11px;
-  height: 14px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ffffff 0%, #f0f0f0 100%);
-  box-shadow: inset 0 1px 2px rgb(0 0 0 / 15%), 0 2px 4px rgb(0 0 0 / 20%);
-}
-
-.character-snake-3d b .eye::after {
-  content: '';
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  width: 5px;
-  height: 6px;
-  border-radius: 50%;
-  background: #172235;
-}
-
-.character-snake-3d b .eye-left { left: 9px; }
-.character-snake-3d b .eye-right { right: 9px; }
-
-.character-snake-coral-3d i,
-.character-snake-coral-3d b {
-  background: radial-gradient(circle at 35% 25%, #ff8c8f 0%, var(--color-coral) 55%, #c83d40 100%);
-}
-
-.character-snake-teal-3d i,
-.character-snake-teal-3d b {
-  background: radial-gradient(circle at 35% 25%, #5fe6a4 0%, var(--color-teal) 55%, #1d7d4c 100%);
-}
-
 /* Animations */
 .score-pop { animation: score-pop 220ms var(--ease-pop); }
 .match-clock { animation: clock-breathe 2.4s var(--ease-in-out) infinite; }
@@ -511,11 +400,6 @@
 @keyframes hint-fade {
   0%, 75% { opacity: 1; }
   100% { opacity: 0.45; }
-}
-
-@keyframes character-breathe {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-4px) scale(1.02); }
 }
 
 .screen-enter {
@@ -583,15 +467,13 @@
   .screen-enter,
   .status-pop,
   .loading-snake,
-  .character-snake-3d,
   .result-hero,
   .result-score,
   .result-detail,
   .score-pop,
   .match-clock,
-  .match-hint,
-  .floating-pickup-3d,
-  .lobby-sun-glow {
+  .match-hint {
     animation: none !important;
   }
 }
+
