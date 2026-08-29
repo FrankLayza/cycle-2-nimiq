@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  GROUND_FRAMES,
   TURF_FRAMES,
   TURF_TILE_PX,
   buildTurfLayout,
@@ -8,19 +9,19 @@ import {
 } from '../src/game/turf';
 
 describe('turf variant selection', () => {
-  it('maps samples across the whole [0,1) range to a known frame', () => {
+  it('maps samples across the whole [0,1) range to a ground frame', () => {
     expect(turfFrameFor(0)).toBe(TURF_FRAMES.plain);
-    expect(turfFrameFor(0.71)).toBe(TURF_FRAMES.plain);
-    expect(turfFrameFor(0.72)).toBe(TURF_FRAMES.tufts);
-    expect(turfFrameFor(0.94)).toBe(TURF_FRAMES.tufts);
-    expect(turfFrameFor(0.95)).toBe(TURF_FRAMES.flowers);
-    expect(turfFrameFor(0.999)).toBe(TURF_FRAMES.flowers);
+    expect(turfFrameFor(0.79)).toBe(TURF_FRAMES.plain);
+    expect(turfFrameFor(0.8)).toBe(TURF_FRAMES.tufts);
+    expect(turfFrameFor(0.999)).toBe(TURF_FRAMES.tufts);
   });
 
-  it('only ever selects ground-cover frames', () => {
-    const allowed = new Set<number>(Object.values(TURF_FRAMES));
+  it('never places the flower frame on the playfield', () => {
+    // Rendered at cell size the flower tile is a high-contrast orange mark on
+    // green: it reads as a collectible and competes with the two pellet types.
     for (let i = 0; i <= 1000; i++) {
-      expect(allowed.has(turfFrameFor(i / 1000))).toBe(true);
+      expect(turfFrameFor(i / 1000)).not.toBe(TURF_FRAMES.flowers);
+      expect(GROUND_FRAMES).toContain(turfFrameFor(i / 1000));
     }
   });
 });
@@ -54,18 +55,16 @@ describe('turf layout', () => {
     expect(columnSignatures.size).toBe(size);
   });
 
-  it('keeps plain grass dominant and flowers incidental', () => {
+  it('keeps plain grass dominant so tufts read as texture, not pattern', () => {
     const layout = buildTurfLayout(99, 30);
-    const counts = { plain: 0, tufts: 0, flowers: 0 };
+    const counts = { plain: 0, tufts: 0 };
     for (const frame of layout) {
       if (frame === TURF_FRAMES.plain) counts.plain++;
-      else if (frame === TURF_FRAMES.tufts) counts.tufts++;
-      else counts.flowers++;
+      else counts.tufts++;
     }
     expect(counts.plain).toBeGreaterThan(counts.tufts);
-    expect(counts.tufts).toBeGreaterThan(counts.flowers);
-    // Flowers must stay rare enough not to compete with the two pellet types.
-    expect(counts.flowers / layout.length).toBeLessThan(0.12);
+    expect(counts.tufts / layout.length).toBeGreaterThan(0.05);
+    expect(counts.tufts / layout.length).toBeLessThan(0.35);
   });
 
   it('survives a zero seed without collapsing to one frame', () => {

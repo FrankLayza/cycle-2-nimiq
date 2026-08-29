@@ -19,21 +19,28 @@ export const TURF_TILE_PX = 16;
 
 export const TURF_SHEET_URL = turfSheetUrl;
 
-/** Frames on the packed sheet that are plain ground cover. */
+/**
+ * Ground-cover frames on the packed sheet.
+ *
+ * `flowers` is deliberately NOT used on the playfield. Rendered at cell size it
+ * is a high-contrast orange mark on green and reads as a collectible — players
+ * chase it, and it competes with the two real pellet types. It stays named here
+ * because it is what sheet frame 2 is, not because the field draws it.
+ */
 export const TURF_FRAMES = {
   plain: 0,
   tufts: 1,
   flowers: 2,
 } as const;
 
+/** Frames the field may actually use. */
+export const GROUND_FRAMES: readonly number[] = [TURF_FRAMES.plain, TURF_FRAMES.tufts];
+
 /**
- * Cumulative weights for turf variant selection. Flowers stay rare so they read
- * as incidental detail rather than as pickups the player should chase — the
- * arena already has two kinds of collectible and a third visual cluster would
- * compete with them.
+ * Share of cells that get plain grass; the rest get tufts. Tufts are a
+ * low-contrast darker speckle, so they read as texture at any density.
  */
-const PLAIN_UNTIL = 0.72;
-const TUFTS_UNTIL = 0.95;
+const PLAIN_SHARE = 0.8;
 
 /**
  * Deterministic 32-bit LCG, matching the one the renderer already used for field
@@ -48,11 +55,9 @@ export function turfRandom(seed: number): () => number {
   };
 }
 
-/** Pick a turf frame from a [0,1) sample. */
+/** Pick a ground frame from a [0,1) sample. */
 export function turfFrameFor(sample: number): number {
-  if (sample < PLAIN_UNTIL) return TURF_FRAMES.plain;
-  if (sample < TUFTS_UNTIL) return TURF_FRAMES.tufts;
-  return TURF_FRAMES.flowers;
+  return sample < PLAIN_SHARE ? TURF_FRAMES.plain : TURF_FRAMES.tufts;
 }
 
 /**

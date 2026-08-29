@@ -114,7 +114,18 @@ export function LandscapeStage({ children }: { children: ReactNode }) {
 
   return (
     <StageContext.Provider value={geometry}>
-      <div className={`landscape-stage${geometry.rotated ? ' landscape-stage-rotated' : ''}`} style={style}>
+      <div
+        className={`landscape-stage${geometry.rotated ? ' landscape-stage-rotated' : ''}`}
+        // Layout must respond to the STAGE, not the viewport. Under rotation a
+        // phone reports a 390px-wide viewport while the stage is 844px wide, so
+        // viewport media queries and Tailwind's `sm:`/`lg:` breakpoints all take
+        // the narrow branch on a wide stage. `.landscape-stage` is a query
+        // container (see index.css) so Tailwind's `@` container variants work,
+        // and this attribute carries the one thing a width query cannot express:
+        // whether the stage is wider than it is tall.
+        data-orientation={geometry.width >= geometry.height ? 'landscape' : 'portrait'}
+        style={style}
+      >
         {children}
       </div>
     </StageContext.Provider>

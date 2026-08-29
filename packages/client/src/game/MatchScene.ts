@@ -120,6 +120,10 @@ export class MatchScene extends Phaser.Scene {
      * Integer cell size, so every cell boundary lands on a whole device pixel and
      * the tiled turf has no seams or drift.
      *
+     * A small margin is reserved first: at an exact fit the field ran flush to the
+     * canvas edge, which clipped the dashed boundary marker and any pellet sitting
+     * in an outer cell.
+     *
      * The tile interior still scales fractionally, which is unavoidable: 30 cells
      * at the sheet's native 16px need 480px, and a phone in landscape is often
      * shorter than that, so an integer *tile* scale would not fit at all — and
@@ -127,7 +131,9 @@ export class MatchScene extends Phaser.Scene {
      * scaling of a ground texture is not noticeable; revisit if the snakes become
      * sprites, which would want a low-resolution canvas upscaled as one image.
      */
-    this.cellPx = Math.max(1, Math.floor(Math.min(width, height) / GRID_SIZE));
+    const shortest = Math.min(width, height);
+    const margin = Math.round(shortest * 0.022);
+    this.cellPx = Math.max(1, Math.floor((shortest - margin * 2) / GRID_SIZE));
     this.fieldSize = this.cellPx * GRID_SIZE;
     this.offX = Math.floor((width - this.fieldSize) / 2);
     this.offY = Math.floor((height - this.fieldSize) / 2);

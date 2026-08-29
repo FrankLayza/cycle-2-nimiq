@@ -78,6 +78,11 @@
   position: fixed;
   inset: 0;
   overflow: hidden;
+  /* Makes the stage a query container so Tailwind's `@` container variants size
+     against the stage rather than the viewport. Under rotation those differ:
+     a phone reports 390px wide while the stage is 844px wide, so plain `sm:`/`lg:`
+     breakpoints take the narrow branch on a wide stage. */
+  container-type: inline-size;
 }
 
 .landscape-stage-rotated {
@@ -121,22 +126,28 @@
   gap: 0.5rem;
 }
 
-/* Portrait (desktop narrow windows — touch devices are rotated instead): the
-   field fills the width, so the side rails collapse and the HUD stacks over it. */
-@media (orientation: portrait) {
-  .match-overlay {
-    flex-direction: column;
-  }
-  .match-frame {
-    height: auto;
-    width: 100%;
-    margin: auto 0;
-  }
-  .match-rail {
-    flex-direction: row;
-    align-items: flex-start;
-    justify-content: space-between;
-  }
+/* Stage is taller than it is wide: the field fills the width, so the side rails
+   collapse and the HUD stacks over it instead.
+
+   This keys off the stage's own orientation, not `@media (orientation: portrait)`.
+   That media query asks about the *device*, which is exactly wrong here — when a
+   portrait phone is rotated into a landscape stage the device reports portrait
+   while the stage is landscape, so the rails were being stacked precisely when
+   they should have sat in the margins. */
+.landscape-stage[data-orientation='portrait'] .match-overlay {
+  flex-direction: column;
+}
+
+.landscape-stage[data-orientation='portrait'] .match-frame {
+  height: auto;
+  width: 100%;
+  margin: auto 0;
+}
+
+.landscape-stage[data-orientation='portrait'] .match-rail {
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
 }
 
 /* Phaser canvas container.
@@ -190,11 +201,24 @@
   box-shadow: 0 24px 48px rgb(3 14 9 / 40%), inset 0 0 0 2px rgb(255 255 255 / 15%);
 }
 
-@media (orientation: portrait) {
-  .match-shell {
-    padding-top: env(safe-area-inset-top);
-    padding-bottom: env(safe-area-inset-bottom);
-  }
+/* Safe areas.
+   Unrotated, the stage's edges are the device's edges, so the insets apply
+   directly. Rotated, they do not: `rotate(90deg) translateY(-100%)` sends the
+   stage's local top edge to the screen's right, so applying inset-top there pads
+   the wrong side. The mapping below follows the transform — local (x, y) lands at
+   screen (W - y, x) — so each edge gets the inset that actually guards it. */
+.landscape-stage {
+  padding-top: env(safe-area-inset-top);
+  padding-right: env(safe-area-inset-right);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+}
+
+.landscape-stage-rotated {
+  padding-top: env(safe-area-inset-right);
+  padding-right: env(safe-area-inset-bottom);
+  padding-bottom: env(safe-area-inset-left);
+  padding-left: env(safe-area-inset-top);
 }
 
 :root {
@@ -293,36 +317,38 @@
   transform: translateY(3px);
 }
 
-/* Turf surface — the lobby is the pitch at rest.
-   Same Kenney tiles as the match field, so the menu and the game read as one
-   object instead of two art styles. This replaced a CSS faux-3D snake
-   illustration with gradient-shaded segments and eyes, which was a third art
-   language and directly contradicted the pixel field the player saw seconds
-   later.
-   `turf-patch.png` is a 4x4 tile composition generated from the same LCG and
-   weights as `game/turf.ts`, so it repeats rarely enough to hide the 16px grid,
-   and it costs 572 bytes rather than the 1.2 MB Phaser chunk a live field would
-   pull onto first paint. */
-.turf-surface {
+/* Turf panel — the arena at rest.
+   Deliberately CONTAINED, not a full-bleed background. Tiling this across the
+   whole lobby turned a game-world texture into wallpaper: at 2x the flower tile
+   became a high-contrast dot that made the 16px lattice unmistakable, and the
+   whole screen read as confetti. Kenney's grass is drawn to be seen small, with
+   game content on top of it.
+   The lobby now mirrors the match composition instead — a dark surround with one
+   bright square field — so the menu echoes the screen the player actually plays
+   on. The patch is 8x8 tiles of plain grass and tufts only, at 1x, which reads as
+   texture rather than pattern. 809 bytes, inlined by Vite. */
+.turf-panel {
   position: relative;
   background-color: var(--color-grass);
   background-image: url('./assets/turf-patch.png');
   background-repeat: repeat;
-  /* 2x nearest-neighbour: each 16px source tile lands on 32 device-independent px. */
   background-size: 128px 128px;
   image-rendering: pixelated;
+  box-shadow:
+    inset 0 0 0 3px var(--color-grass-deep),
+    inset 0 0 0 6px rgb(255 255 255 / 18%),
+    0 18px 40px rgb(3 14 9 / 45%);
 }
 
-/* Legibility scrim. Light, not dark — the Fresh Rink identity is a warm daylight
-   palette (D21/D41), so the turf stays sunlit and the cream panels lift off it. */
-.turf-surface > .turf-scrim {
+/* Matches the shrinking-boundary marker on the real field, so the preview reads
+   as this game's arena rather than a generic square of grass. Scoped to the
+   preview: on the small header badge the dashes only read as clutter. */
+.turf-panel-preview::after {
   position: absolute;
-  inset: 0;
-  z-index: 0;
+  inset: 14%;
+  content: '';
+  border: 2px dashed rgb(255 255 255 / 55%);
   pointer-events: none;
-  background:
-    radial-gradient(ellipse 120% 80% at 50% -10%, rgb(245 243 238 / 82%) 0%, rgb(245 243 238 / 40%) 45%, transparent 78%),
-    linear-gradient(180deg, transparent 55%, rgb(14 22 36 / 32%) 100%);
 }
 
 /* Pixel-grid icons. Drawn on the same 16px lattice as the tiles, with

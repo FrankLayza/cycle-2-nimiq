@@ -13,21 +13,19 @@ interface Props {
 }
 
 /**
- * Lobby — the pitch at rest.
+ * Lobby — composed like the match screen: a dark surround with one bright square
+ * field, so the menu echoes the screen the player actually plays on.
  *
- * This is a mini app launched from inside a wallet, not a website: the player has
- * already chosen to be here, so the screen's whole job is to start a match. The
- * previous version was shaped like a marketing landing page — a hero pitch, a
- * symmetric three-column stat grid ("1v1 / 60s / NIM"), and a "League Guarantee"
- * card — which sold a product the player had already bought, and whose "1v1"
- * claim had gone stale under D44's 2-4 player rooms.
+ * Two earlier attempts were wrong in opposite directions. The first was a
+ * marketing landing page — hero pitch, symmetric stat grid, CSS faux-3D snakes —
+ * selling a product the player had already opened. The second tiled the Kenney
+ * turf across the whole screen; at 2x the flower tile became a high-contrast dot
+ * that made the 16px lattice unmistakable, so the entire lobby read as confetti
+ * wallpaper, grey-on-green body text sat unreadable on top of it, and the content
+ * overflowed a phone's 390px landscape height.
  *
- * It also drew its own snakes in CSS, with gradient shading and highlighted eyes.
- * That was a third art language, and it contradicted the pixel field the player
- * saw two seconds later. The background is now the same Kenney turf as the match,
- * so the menu and the game are visibly one object.
- *
- * Structure follows the three things a player can actually do. Nothing else.
+ * The turf is now contained to a single arena-preview panel where it means
+ * something, and the actions carry the screen.
  */
 export function Lobby({ wallet, onConnectWallet, onPlay, onPvp, onToday, onCreateRoom, roomError }: Props) {
   const params = new URLSearchParams(window.location.search);
@@ -37,9 +35,7 @@ export function Lobby({ wallet, onConnectWallet, onPlay, onPvp, onToday, onCreat
   const codeInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    if (!open) return;
-    codeInputRef.current?.focus({ preventScroll: false });
-    codeInputRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (open) codeInputRef.current?.focus({ preventScroll: true });
   }, [open]);
 
   useEffect(() => {
@@ -61,214 +57,211 @@ export function Lobby({ wallet, onConnectWallet, onPlay, onPvp, onToday, onCreat
     };
   }, [wallet]);
 
-  // Streak is real data the lobby already fetched but used to bury in the footer.
-  // It belongs on the mode it describes, where it is a reason to tap.
-  const dailyDetail = !wallet
-    ? 'Daily seeded solo run · connect to record a streak'
-    : streak === null
-      ? 'Daily seeded solo run · start your streak'
+  // Real data the lobby already fetched. It belongs on the mode it describes,
+  // where it is a reason to tap, rather than buried in a footer line.
+  const dailyDetail =
+    !wallet || streak === null
+      ? 'Daily seeded run'
       : streak === 0
-        ? 'Daily seeded solo run · no streak yet'
-        : `Daily seeded solo run · ${streak} day${streak === 1 ? '' : 's'} running`;
+        ? 'Daily seeded run · no streak yet'
+        : `Daily seeded run · ${streak} day${streak === 1 ? '' : 's'}`;
 
   return (
-    <main className="turf-surface flex h-full min-h-0 w-full flex-col overflow-hidden">
-      <div className="turf-scrim" aria-hidden="true" />
-
-      <div className="relative z-10 flex h-full min-h-0 flex-col gap-3 overflow-y-auto px-4 py-3 sm:gap-4 sm:px-6 sm:py-4 lg:px-10">
-        {/* Header */}
-        <header className="flex shrink-0 items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border-2 border-ink/15 bg-card text-base font-black text-ink shadow-xs"
-              aria-hidden="true"
-            >
-              S
-            </div>
-            <div className="leading-tight">
-              <p className="m-0 text-[10px] font-black uppercase tracking-[0.18em] text-grass-deep">
-                Nimiq Mini App
-              </p>
-              <h1 className="m-0 text-base font-black tracking-tight text-ink sm:text-lg">Competitive Snake</h1>
-            </div>
-          </div>
-
-          {wallet ? (
-            <div
-              className="flex items-center gap-2 rounded-full border border-line bg-card/95 px-3 py-1.5 text-[11px] font-bold text-ink shadow-xs"
-              title={wallet.address}
-            >
-              <span className="h-2 w-2 rounded-full bg-teal" />
-              <span className="tabular-nums">
-                {wallet.address.slice(0, 6)}…{wallet.address.slice(-4)}
-              </span>
-            </div>
-          ) : (
-            <button
-              type="button"
-              className="btn-3d btn-3d-white rounded-full px-4 py-2 text-[11px] font-black"
-              onClick={onConnectWallet}
-            >
-              Connect Wallet
-            </button>
-          )}
-        </header>
-
-        {/* Body: the ask on the left, the alternatives on the right. Landscape-first,
-            because the shell presents landscape on touch devices. */}
-        <div className="grid min-h-0 flex-1 items-center gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,24rem)] lg:gap-10">
-          <section>
-            <h2 className="m-0 text-[1.75rem] font-black leading-[0.95] tracking-tight text-ink sm:text-4xl lg:text-5xl">
-              Up to four snakes,
-              <br />
-              one shrinking arena.
-            </h2>
-            <p className="mt-2.5 max-w-sm text-sm font-medium leading-relaxed text-ink/70 sm:text-base">
-              Every match runs on a shared seed, so the arena is identical for all players and the
-              result can be replayed and checked.
-            </p>
-
-            <button
-              type="button"
-              className="btn-3d btn-3d-coral mt-4 min-h-14 w-full max-w-sm rounded-2xl text-xl tracking-wide shadow-md sm:min-h-16 sm:text-2xl"
-              onClick={onPlay}
-            >
-              Quick Match
-            </button>
-            <p className="mt-2 max-w-sm text-center text-[11px] font-bold text-ink/60">
-              Against a bot · starts immediately · no wallet needed
-            </p>
-          </section>
-
-          {/* The other two modes. Two rows, because there are two — not a
-              symmetric grid padded out to look balanced. */}
-          <section className="flex shrink-0 flex-col gap-2.5">
-            <button
-              type="button"
-              className="card-2d flex items-center gap-3.5 p-4 text-left"
-              onClick={() => setOpen((prev) => !prev)}
-              aria-expanded={open}
-            >
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-teal text-ink shadow-xs">
-                <PixelIcon name="friends" size={22} />
-              </span>
-              <span className="min-w-0">
-                <span className="block text-base font-black text-ink">Play a Friend</span>
-                <span className="mt-0.5 block text-[11px] font-semibold leading-snug text-muted">
-                  Private room code · 2–4 players
-                </span>
-              </span>
-            </button>
-
-            <button type="button" className="card-2d flex items-center gap-3.5 p-4 text-left" onClick={onToday}>
-              <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-lemon text-ink shadow-xs">
-                <PixelIcon name="daily" size={22} />
-              </span>
-              <span className="min-w-0">
-                <span className="block text-base font-black text-ink">Today&apos;s Run</span>
-                <span className="mt-0.5 block text-[11px] font-semibold leading-snug text-muted">
-                  {dailyDetail}
-                </span>
-              </span>
-            </button>
-
-            {open && (
-              <div className="room-form screen-enter rounded-2xl border-2 border-teal/40 bg-card p-4 shadow-lg">
-                <div className="flex items-center justify-between gap-2 border-b border-line pb-2.5">
-                  <h3 className="m-0 text-sm font-black text-ink">Join a private room</h3>
-                  <button
-                    type="button"
-                    className="grid h-7 w-7 place-items-center rounded-lg text-muted transition-colors duration-150 hover:bg-cream-deep hover:text-ink"
-                    onClick={() => setOpen(false)}
-                    aria-label="Close room code form"
-                  >
-                    <PixelIcon name="close" size={14} />
-                  </button>
-                </div>
-
-                <form
-                  className="mt-3 flex flex-col gap-2.5 sm:flex-row"
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    if (code.length === 4) onPvp(code);
-                  }}
-                >
-                  <div className="flex-1">
-                    <label
-                      className="block text-[9px] font-black uppercase tracking-widest text-muted"
-                      htmlFor="room-code"
-                    >
-                      Room code
-                    </label>
-                    <input
-                      id="room-code"
-                      ref={codeInputRef}
-                      value={code}
-                      onChange={(event) =>
-                        setCode(
-                          event.target.value
-                            .toUpperCase()
-                            .replace(/[^0-9A-HJ-KM-NP-TV-Z]/g, '')
-                            .slice(0, 4)
-                        )
-                      }
-                      maxLength={4}
-                      placeholder="ABCD"
-                      autoComplete="off"
-                      spellCheck={false}
-                      inputMode="text"
-                      className="mt-1 h-12 w-full rounded-xl border-2 border-line bg-cream px-3 text-center text-xl font-black tracking-[0.4em] text-ink shadow-inner outline-hidden transition-colors duration-150 focus:border-teal"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="btn-3d btn-3d-teal mt-auto h-12 shrink-0 rounded-xl px-6 text-sm font-black text-ink disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none"
-                    disabled={code.length !== 4}
-                  >
-                    Join
-                  </button>
-                </form>
-
-                {/* Codes are Crockford base32, so I, L, O and U are excluded. The
-                    input silently strips them, which reads as a broken keyboard
-                    unless it is said out loud. */}
-                <p className="mt-2 text-[10px] font-semibold text-muted">
-                  Four characters. No I, L, O or U — they are left out so codes cannot be misread.
-                </p>
-
-                <button
-                  type="button"
-                  className="btn-3d btn-3d-white mt-3 h-11 w-full rounded-xl text-xs font-black text-ink"
-                  onClick={onCreateRoom}
-                >
-                  Create a room instead
-                </button>
-
-                {roomError && (
-                  <p
-                    className="m-0 mt-2.5 rounded-xl border border-coral-dark/20 bg-coral-soft/50 p-2.5 text-center text-[11px] font-bold text-coral-deep"
-                    role="alert"
-                  >
-                    {roomError}
-                  </p>
-                )}
-              </div>
-            )}
-          </section>
+    <main className="flex h-full min-h-0 w-full flex-col overflow-hidden bg-ink-deep px-4 pb-3 pt-3 text-cream @2xl:px-6 @4xl:px-10">
+      {/* Header */}
+      <header className="flex shrink-0 items-center justify-between gap-3 pb-3">
+        <div className="flex items-center gap-2.5">
+          <span
+            className="turf-panel grid h-9 w-9 shrink-0 place-items-center rounded-lg text-sm font-black text-white"
+            style={{ textShadow: '0 1px 2px rgb(3 14 9 / 70%)' }}
+            aria-hidden="true"
+          >
+            S
+          </span>
+          <span className="leading-tight">
+            <span className="block text-[9px] font-black uppercase tracking-[0.18em] text-teal">
+              Nimiq Mini App
+            </span>
+            <span className="block text-sm font-black tracking-tight text-white @2xl:text-base">
+              Competitive Snake
+            </span>
+          </span>
         </div>
 
-        {/* Footer */}
-        <footer className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-1.5 border-t border-ink/10 pt-2.5 text-[10px] font-bold text-ink/60">
-          <span className="flex items-center gap-1.5">
-            {wallet && streak !== null && streak > 0 && (
-              <PixelIcon name="streak" size={12} className="text-grass-deep" />
-            )}
-            <span>Rewards come from a team-seeded pool · the house never holds player funds</span>
+        {wallet ? (
+          <span
+            className="flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-bold text-white"
+            title={wallet.address}
+          >
+            <span className="h-2 w-2 rounded-full bg-teal" />
+            <span className="tabular-nums">
+              {wallet.address.slice(0, 6)}…{wallet.address.slice(-4)}
+            </span>
           </span>
-          <span>Deterministic sim · replay-verified</span>
-        </footer>
+        ) : (
+          <button
+            type="button"
+            className="rounded-full border border-white/20 bg-white/10 px-4 py-2 text-[11px] font-black text-white transition-colors duration-150 hover:bg-white/20"
+            onClick={onConnectWallet}
+          >
+            Connect Wallet
+          </button>
+        )}
+      </header>
+
+      {/* Body: the arena on the left, the ways into it on the right. Capped and
+          centred so a tall desktop window reads as a composed block rather than a
+          phone layout adrift in empty space. */}
+      <div className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 items-center gap-5 @2xl:gap-7">
+        {/* The arena at rest — same turf and same dashed boundary marker as the
+            live field. Dropped on very short or narrow viewports, where the
+            actions need the room more than the preview does. */}
+        <div
+          className="turf-panel turf-panel-preview hidden aspect-square h-full max-h-56 shrink-0 rounded-xl @2xl:block @4xl:max-h-80"
+          aria-hidden="true"
+        />
+
+        <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <h2 className="m-0 text-2xl font-black leading-[1.05] tracking-tight text-white @2xl:text-3xl @4xl:text-[2.6rem]">
+            Up to four snakes,
+            <br />
+            one shrinking arena.
+          </h2>
+
+          <button
+            type="button"
+            className="btn-3d btn-3d-coral min-h-12 w-full rounded-xl text-lg tracking-wide @2xl:min-h-14 @2xl:text-xl"
+            onClick={onPlay}
+          >
+            Quick Match
+          </button>
+
+          <div className="grid gap-2 @2xl:grid-cols-2">
+            <button
+              type="button"
+              className="flex items-center gap-2.5 rounded-xl border border-white/15 bg-white/8 p-3 text-left transition-colors duration-150 hover:border-teal/50 hover:bg-white/15"
+              onClick={() => setOpen(true)}
+            >
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-teal text-ink">
+                <PixelIcon name="friends" size={18} />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-black text-white">Play a Friend</span>
+                <span className="block text-[10px] font-semibold text-white/60">
+                  Room code · 2–4 players
+                </span>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              className="flex items-center gap-2.5 rounded-xl border border-white/15 bg-white/8 p-3 text-left transition-colors duration-150 hover:border-lemon/50 hover:bg-white/15"
+              onClick={onToday}
+            >
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-lemon text-ink">
+                <PixelIcon name="daily" size={18} />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-black text-white">Today&apos;s Run</span>
+                <span className="block text-[10px] font-semibold text-white/60">{dailyDetail}</span>
+              </span>
+            </button>
+          </div>
+
+          <p className="m-0 text-[10px] font-bold text-white/45">
+            Quick Match runs against a bot and starts immediately — no wallet needed.
+          </p>
+        </div>
       </div>
+
+      {/* Footer */}
+      <footer className="flex shrink-0 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-white/10 pt-2.5 text-[10px] font-bold text-white/40">
+        <span>Rewards come from a team-seeded pool · the house never holds player funds</span>
+        <span>Deterministic sim · replay-verified</span>
+      </footer>
+
+      {/* Room code. A dialog rather than an inline expander: on a phone's 390px
+          landscape height an expanding panel pushed the page into a scroll. */}
+      {open && (
+        <div
+          className="absolute inset-0 z-20 grid place-items-center bg-ink-deep/80 p-4 backdrop-blur-xs"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Join a private room"
+        >
+          <div className="screen-enter w-full max-w-sm rounded-2xl border border-white/15 bg-ink p-4 shadow-2xl">
+            <div className="flex items-center justify-between gap-2 pb-3">
+              <h3 className="m-0 text-sm font-black text-white">Join a private room</h3>
+              <button
+                type="button"
+                className="grid h-7 w-7 place-items-center rounded-lg text-white/60 transition-colors duration-150 hover:bg-white/10 hover:text-white"
+                onClick={() => setOpen(false)}
+                aria-label="Close"
+              >
+                <PixelIcon name="close" size={14} />
+              </button>
+            </div>
+
+            <form
+              className="flex gap-2.5"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (code.length === 4) onPvp(code);
+              }}
+            >
+              <input
+                id="room-code"
+                ref={codeInputRef}
+                value={code}
+                onChange={(event) =>
+                  setCode(
+                    event.target.value
+                      .toUpperCase()
+                      .replace(/[^0-9A-HJ-KM-NP-TV-Z]/g, '')
+                      .slice(0, 4)
+                  )
+                }
+                maxLength={4}
+                placeholder="ABCD"
+                aria-label="Room code"
+                autoComplete="off"
+                spellCheck={false}
+                className="h-12 min-w-0 flex-1 rounded-xl border-2 border-white/20 bg-ink-deep px-3 text-center text-xl font-black tracking-[0.35em] text-white outline-hidden transition-colors duration-150 placeholder:text-white/25 focus-visible:border-white/40"
+              />
+              <button
+                type="submit"
+                className="btn-3d btn-3d-teal h-12 shrink-0 rounded-xl px-5 text-sm font-black text-ink disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"
+                disabled={code.length !== 4}
+              >
+                Join
+              </button>
+            </form>
+
+            {/* Codes are Crockford base32, so I, L, O and U are excluded. The input
+                strips them silently, which reads as a broken keyboard unless said. */}
+            <p className="m-0 mt-2 text-[10px] font-semibold text-white/45">
+              Four characters. No I, L, O or U — left out so codes cannot be misread.
+            </p>
+
+            <button
+              type="button"
+              className="mt-3 h-10 w-full rounded-xl border border-white/20 bg-white/10 text-xs font-black text-white transition-colors duration-150 hover:bg-white/20"
+              onClick={onCreateRoom}
+            >
+              Create a room instead
+            </button>
+
+            {roomError && (
+              <p
+                className="m-0 mt-2.5 rounded-xl border border-coral-dark/30 bg-coral-deep/25 p-2.5 text-center text-[11px] font-bold text-coral-soft"
+                role="alert"
+              >
+                {roomError}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
