@@ -38,33 +38,60 @@ export function App() {
     }
   };
 
+  const enterFullscreen = () => {
+    if (typeof document !== 'undefined' && document.documentElement.requestFullscreen) {
+      void document.documentElement.requestFullscreen().catch(() => {});
+    }
+  };
+
   return (
     <LandscapeStage>
       <div className="app h-full min-h-full overflow-hidden">
         {screen === 'lobby' ? (
-        <Lobby
-          wallet={wallet}
-          onConnectWallet={handleConnect}
-          onPlay={() => {
-            setMatchKey((k) => k + 1);
-            setScreen('match');
-          }}
-          onPvp={(code) => { setRoomCode(code); setScreen('pvp'); }}
-          onToday={() => setScreen('today')}
-          onCreateRoom={() => void handleCreateRoom()}
-          roomError={roomError}
-        />
-      ) : screen === 'match' ? (
-        <Suspense fallback={<ScreenLoader label="Preparing the rink" />}><MatchView
-          key={matchKey}
-          onExit={() => setScreen('lobby')}
-          onRematch={() => setMatchKey((k) => k + 1)}
-        /></Suspense>
-      ) : screen === 'today' ? (
-        <Suspense fallback={<ScreenLoader label="Preparing today\'s field" />}><TodayRunView wallet={wallet} onExit={() => setScreen('lobby')} /></Suspense>
-      ) : (
-        <Suspense fallback={<ScreenLoader label="Connecting to the match" />}><MatchView key={roomCode} mode="pvp" roomCode={roomCode} wallet={wallet?.address} onExit={() => setScreen('lobby')} onRematch={() => setRoomCode(roomCode)} /></Suspense>
-      )}
+          <Lobby
+            wallet={wallet}
+            onConnectWallet={handleConnect}
+            onPlay={() => {
+              enterFullscreen();
+              setMatchKey((k) => k + 1);
+              setScreen('match');
+            }}
+            onPvp={(code) => {
+              enterFullscreen();
+              setRoomCode(code);
+              setScreen('pvp');
+            }}
+            onToday={() => {
+              enterFullscreen();
+              setScreen('today');
+            }}
+            onCreateRoom={() => void handleCreateRoom()}
+            roomError={roomError}
+          />
+        ) : screen === 'match' ? (
+          <Suspense fallback={<ScreenLoader label="Preparing the rink" />}>
+            <MatchView
+              key={matchKey}
+              onExit={() => setScreen('lobby')}
+              onRematch={() => setMatchKey((k) => k + 1)}
+            />
+          </Suspense>
+        ) : screen === 'today' ? (
+          <Suspense fallback={<ScreenLoader label="Preparing today's field" />}>
+            <TodayRunView wallet={wallet} onExit={() => setScreen('lobby')} />
+          </Suspense>
+        ) : (
+          <Suspense fallback={<ScreenLoader label="Connecting to the match" />}>
+            <MatchView
+              key={roomCode}
+              mode="pvp"
+              roomCode={roomCode}
+              wallet={wallet?.address}
+              onExit={() => setScreen('lobby')}
+              onRematch={() => setRoomCode(roomCode)}
+            />
+          </Suspense>
+        )}
       </div>
     </LandscapeStage>
   );
@@ -81,4 +108,3 @@ function ScreenLoader({ label }: { label: string }) {
     </div>
   );
 }
-

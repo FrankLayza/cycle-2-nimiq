@@ -13,6 +13,7 @@ import {
   specularOffset,
 } from './theme';
 import {
+  TURF_FRAMES,
   TURF_SHEET_URL,
   TURF_TEXTURE_KEY,
   TURF_TILE_PX,
@@ -25,7 +26,7 @@ import {
   cornerAngle,
   snakeFrame,
 } from './snakeSprites';
-import { SNAKE_TEXTURE_KEY, ensureSnakeTexture } from './snakeTexture';
+import { SNAKE_SHEET_URL, SNAKE_TEXTURE_KEY, ensureSnakeTexture } from './snakeTexture';
 
 /** Render order. Turf tiles are re-added on every field rebuild, so depth is explicit. */
 /** Contact-shadow strength for the snake silhouette pass. */
@@ -106,6 +107,7 @@ export class MatchScene extends Phaser.Scene {
   }
 
   preload() {
+    this.load.image('snake-sheet', SNAKE_SHEET_URL);
     this.load.spritesheet(TURF_TEXTURE_KEY, TURF_SHEET_URL, {
       frameWidth: TURF_TILE_PX,
       frameHeight: TURF_TILE_PX,
@@ -137,21 +139,6 @@ export class MatchScene extends Phaser.Scene {
   private updateDimensions() {
     const width = this.scale.width;
     const height = this.scale.height;
-    /*
-     * Integer cell size, so every cell boundary lands on a whole device pixel and
-     * the tiled turf has no seams or drift.
-     *
-     * A small margin is reserved first: at an exact fit the field ran flush to the
-     * canvas edge, which clipped the dashed boundary marker and any pellet sitting
-     * in an outer cell.
-     *
-     * The tile interior still scales fractionally, which is unavoidable: 30 cells
-     * at the sheet's native 16px need 480px, and a phone in landscape is often
-     * shorter than that, so an integer *tile* scale would not fit at all — and
-     * where it did fit it would waste up to a third of the viewport. Fractional
-     * scaling of a ground texture is not noticeable; revisit if the snakes become
-     * sprites, which would want a low-resolution canvas upscaled as one image.
-     */
     const shortest = Math.min(width, height);
     const margin = Math.round(shortest * 0.022);
     this.cellPx = Math.max(1, Math.floor((shortest - margin * 2) / GRID_SIZE));
@@ -175,19 +162,6 @@ export class MatchScene extends Phaser.Scene {
     if (this.decoratedSeed !== snapshot.seed) this.drawField(snapshot.seed);
   }
 
-  /**
-   * Spawn pickup FX by diffing two consecutive authoritative snapshots.
-   *
-   * This runs once per tick against raw integer cells, rather than every frame
-   * against interpolated ones, and it distinguishes a pellet that was *eaten*
-   * from one that merely expired. The sim drops a bounty once it passes
-   * `BOUNTY_MAX_AGE`, and the previous frame-based diff treated any disappearance
-   * as a pickup — so an uneaten bounty timing out threw a "+3" celebration that
-   * nobody had scored.
-   *
-   * A pellet was eaten exactly when a snake head occupies its cell on the next
-   * tick, because `step()` awards pellets at the head's final position.
-   */
   private spawnPelletFx(previous: RenderSnapshot, next: RenderSnapshot, time: number) {
     if (previous.pellets.length === 0) return;
     const survived = new Set(next.pellets.map((p) => `${p.x}:${p.y}:${p.type}`));
@@ -206,8 +180,6 @@ export class MatchScene extends Phaser.Scene {
       const color = pellet.type === 1 ? PELLET.bounty : this.pelletColor();
 
       if (!heads.has(`${pellet.x}:${pellet.y}`)) {
-        // Expired, not eaten: a small colourless puff so the pellet does not
-        // simply blink out, but no score popup and no celebration.
         for (let index = 0; index < 5; index++) {
           const angle = (index * Math.PI * 2) / 5;
           this.particles.push({
@@ -224,8 +196,6 @@ export class MatchScene extends Phaser.Scene {
         continue;
       }
 
-      // Burst velocities are pre-scaled to pixels-per-life, so the burst covers
-      // the same fraction of a cell at any canvas size.
       const count = pellet.type === 1 ? 12 : 8;
       for (let index = 0; index < count; index++) {
         const angle = (index * Math.PI * 2) / count + (Math.random() - 0.5) * 0.5;
@@ -255,7 +225,6 @@ export class MatchScene extends Phaser.Scene {
   update(time: number) {
     if (!this.current) return;
     const alpha = (time - this.currentReceivedAt) / TICK_MS;
-    // Positions interpolate; piece choice and rotation come from the raw cells.
     this.renderSnapshot(interpolateSnapshots(this.previous, this.current, alpha), this.current, time);
   }
 
@@ -266,17 +235,6 @@ export class MatchScene extends Phaser.Scene {
     const g = this.field;
     g.clear();
 
-    /*
-     * A hard-edged frame, aligned to the cell grid.
-     *
-     * What used to be here — a rounded stadium bevel, a chalk centre circle, and
-     * 40 vector daisies — all fought the 16px tiles: smooth anti-aliased curves
-     * over nearest-neighbour pixel art reads as two unrelated pieces of art. The
-     * mow stripes went too: they were drawn one per gameplay column, which made
-     * the 30x30 lattice the most prominent thing on the field. The tiles now
-     * carry the texture, and their variant is seeded per cell so nothing lines up
-     * with the grid.
-     */
     const border = Math.max(2, Math.round(this.cellPx * 0.3));
     g.lineStyle(border, FIELD.rim, 1);
     g.strokeRect(
@@ -290,24 +248,29 @@ export class MatchScene extends Phaser.Scene {
   }
 
   /**
-   * Stamp the turf tiles.
-   *
-   * All 900 images share one texture, so they batch into a single draw call, and
-   * they are static — this runs once per seed (and on resize), never per frame.
+   * Stamp the turf tiles across the entire canvas viewport.
    */
   private drawTurf(seed: number) {
     this.turf.clear(true, true);
     const layout = buildTurfLayout(seed, GRID_SIZE);
     const scale = this.cellPx / TURF_TILE_PX;
 
-    for (let y = 0; y < GRID_SIZE; y++) {
-      for (let x = 0; x < GRID_SIZE; x++) {
+    const minX = Math.floor(-this.offX / this.cellPx);
+    const maxX = Math.ceil((this.scale.width - this.offX) / this.cellPx);
+    const minY = Math.floor(-this.offY / this.cellPx);
+    const maxY = Math.ceil((this.scale.height - this.offY) / this.cellPx);
+
+    for (let y = minY; y < maxY; y++) {
+      for (let x = minX; x < maxX; x++) {
+        const inGrid = x >= 0 && x < GRID_SIZE && y >= 0 && y < GRID_SIZE;
+        const frame = inGrid ? layout[y * GRID_SIZE + x] : TURF_FRAMES.grassInner;
+
         const tile = this.add
           .image(
             this.offX + x * this.cellPx,
             this.offY + y * this.cellPx,
             TURF_TEXTURE_KEY,
-            layout[y * GRID_SIZE + x]
+            frame
           )
           .setOrigin(0, 0)
           .setScale(scale)

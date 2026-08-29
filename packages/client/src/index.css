@@ -186,6 +186,11 @@
 .match-shell {
   isolation: isolate;
   touch-action: none;
+  background-color: #568239;
+  background-image: url('./assets/field-grass.png');
+  background-repeat: repeat;
+  background-size: 24px 24px;
+  image-rendering: pixelated;
 }
 
 .daily-match-shell {

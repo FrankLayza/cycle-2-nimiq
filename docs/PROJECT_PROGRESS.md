@@ -21,7 +21,7 @@ The monorepo is scaffolded and green. Verified locally (2026-08-15):
 | Deterministic sim (single source of truth) | `packages/sim` | ✅ Ported from spike + arena pre-derivation (D28), context-separated RNG, `SIM_VERSION` gate (D31), golden hashes locked |
 | REST + WS server (single port, D26) | `packages/server` | ✅ Fastify + Colyseus attach; health, Today's Run verification, room APIs, wallet profiles, leaderboard, rewards schedule, payout status, admin stats; SQLite/WAL with the §6 schema |
 | Authoritative match room | `packages/server/src/rooms` | ✅ Tick loop (110ms), room codes (Crockford), bots free-play only (D5), input log capture (D27), rematch |
-| Client shell | `packages/client` | 🟡 Landscape-first shell, turf-tiled pixel-art arena, swipe/hold gesture play, rebuilt lobby, room creation/join, unified PvP/Today's Run framing, result sharing, wallet initialization, and room-code PvP are implemented; creator joins are StrictMode-safe and final snakes remain visible; **no browser/device QA has been run on the new art direction or gestures** |
+| Client shell | `packages/client` | 🟡 Landscape-first shell, turf-tiled pixel-art arena, generated pixel snakes with rounded corners, swipe/hold gesture play, rebuilt lobby, room creation/join, unified PvP/Today's Run framing, result sharing, wallet initialization, and room-code PvP are implemented; creator joins are StrictMode-safe and final snakes remain visible; verified by browser screenshots, **real-device Nimiq Pay QA still outstanding** |
 | CI / deploy workflows | `.github/workflows` | ✅ ci.yml (typecheck/lint/tests/build) + deploy.yml template (Railway webhook + static host) |
 
 ### Decisions made this milestone
@@ -53,16 +53,19 @@ The authoritative room now uses the 110ms simulation cadence for patches, reject
 
 ### Client art direction and controls completed (D46/D47)
 
-Commits `9edcde1`, `6b65974`, `8f8d3d3`, `5ca83d7`. Client tests grew 3 → 29.
+Commits `9edcde1`, `6b65974`, `8f8d3d3`, `5ca83d7`, `0a2bb3c`, `3e649f3`. Client tests grew 3 → 41.
 
 - Device-pixel canvas and one shared responsive game factory; Phaser 3 has no DPR support of its own, so the field was previously upscaled and soft.
 - Landscape-first presentation (orientation lock attempted, CSS rotation as the real mechanism). This also fixed a live control bug: `swipeToDir` already compensated for a rotation that did not exist, so a rightward swipe steered the snake upward.
 - D-pad and boost button deleted; swipe to steer, hold the right half to boost, keyboard unchanged on desktop.
 - Field tiled from the CC0 Kenney "Tiny Town" 16px sheet with seeded per-cell variants; `pixelArt` rendering. The old mow stripes ran one per gameplay column, which made the 30×30 lattice the most prominent thing on screen.
-- Lobby rebuilt on the same turf material; marketing hero, symmetric stat grid (with its stale "1v1" claim) and CSS faux-3D snakes removed; interface emoji replaced by 16px-lattice `PixelIcon`s.
+- Snakes are generated rather than sourced: pieces rasterise as a distance field around a centreline polyline, so a corner is a bent line and its elbow rounds. That answers the "turns at 90 degrees" complaint without touching the integer-only sim. One canvas atlas, 4 seats x 4 pieces, pooled sprites.
+- Lobby rebuilt with the turf as a contained arena preview; marketing hero, symmetric stat grid (with its stale "1v1" claim) and CSS faux-3D snakes removed; interface emoji replaced by 16px-lattice `PixelIcon`s.
 - Fixed a false "+3" celebration on bounty expiry and a shrink countdown that ran a 10s timer on an 11s event.
 
-**Outstanding:** none of this has been seen in a browser. Highest-risk unknown is safe-area insets under the CSS rotation, where `env(safe-area-inset-*)` no longer matches the visual edges.
+**Verified by browser screenshots** (Playwright + bundled Chromium against the client dev server). That pass caught four things no automated check could: viewport media queries take the wrong branch under the CSS rotation, so the stage is now a query container publishing `data-orientation`; safe-area insets had to be permuted to follow the transform; the Kenney flower tile read as a collectible on the field; and sprite outlines needed to be near-ink or the teal seat dissolved into the turf.
+
+**Outstanding:** real-device Nimiq Pay QA (rotation and remapped safe areas on a notched phone), and pickups are still vector art on a pixel field — D47 stays in progress for that.
 
 ## Success metrics (D19) — tracking
 

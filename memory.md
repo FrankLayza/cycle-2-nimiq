@@ -7,14 +7,14 @@ Quick orientation for any AI model dropped into this repo. For full state, read
 
 ## What this is
 
-**Competitive Snake** — a real-time, skill-based 1v1 snake battle built as a **Nimiq Pay Mini App**
-for the **Nimiq Mini Apps Competition — Cycle II** (Aug 17 – Sep 11, 2026). Internal submission
+**Competitive Snake** — a real-time, skill-based snake battle for **2–4 players** built as a **Nimiq Pay
+Mini App** for the **Nimiq Mini Apps Competition — Cycle II** (Aug 17 – Sep 11, 2026). Internal submission
 target **Sep 6 (T-5)**. Wallet = player identity; rewards are skill-based, replay-verified, and paid
 from a team-seeded pool — **not** a betting product.
 
 ## Source of truth (in order)
 
-1. `COMPETITIVE_SNAKE_GAME.md` — living project doc: concept, decisions (D1–D39), rewards, roadmap, risks.
+1. `COMPETITIVE_SNAKE_GAME.md` — living project doc: concept, decisions (D1–D47), rewards, roadmap, risks.
 2. `architecture/ARCHITECTURE.md` — build blueprint (D25–D34).
 3. `docs/lifecycle/` — lifecycle breakdown for each phase:
    - [`PHASE_1_SCAFFOLD.md`](docs/lifecycle/PHASE_1_SCAFFOLD.md) — W1 scaffold (Done ✅)
@@ -39,7 +39,7 @@ Dependency direction (enforced): `server → sim` · `client → sim`. Client an
 ## Current state (2026-08-29)
 
 - **W1 scaffold DONE + committed.** Sim ported with golden hashes locked; Colyseus room with tick loop;
-  React/Phaser client with rotated viewport + local bot play; 23 tests green incl. a 2-client PvP e2e.
+  React/Phaser client. Suites: sim 16 · client 41 · server 45, all green.
 - **W2 active.** The official `@nimiq/mini-app-sdk` is installed; silent `init()` + explicit
   `listAccounts()` identity, room creation/join, StrictMode-safe PvP, authoritative rendering,
   Today's Run signing, shared touch/keyboard controls, and payout status lookup are implemented.
@@ -49,6 +49,12 @@ Dependency direction (enforced): `server → sim` · `client → sim`. Client an
   spectator joins are rejected; a player who dies remains connected and observes the survivors. Room admission
   rejects duplicate codes in-process, matches lock at start, unexpected disconnects pause for bounded reconnection,
   and consented/time-out forfeits are recorded as deterministic sim inputs.
+- **Client is pixel art and landscape-first (D46/D47).** The field is tiled from the CC0 Kenney "Tiny
+  Town" 16px sheet and Phaser renders with `pixelArt`. Snakes are *generated*, not sourced —
+  `game/snakeSprites.ts` rasterises head/straight/corner/tail as a distance field around a centreline
+  polyline, so corners round. The app presents landscape (native orientation lock attempted, CSS 90deg
+  rotation as the real mechanism); the on-screen d-pad and boost button are gone in favour of
+  swipe-to-steer plus hold-the-right-half-to-boost. Pickups are still vector art — the last art clash.
 
 ## Conventions & gotchas
 
@@ -66,6 +72,19 @@ Dependency direction (enforced): `server → sim` · `client → sim`. Client an
   defined via `@theme`). Per `agents.md` Rule 1, all UI must use **Tailwind v4 canonical class names**
   (see the rename table in `agents.md`) — never v3 aliases like `shadow`, `rounded`, `ring`,
   `bg-gradient-to-*`, or `*-opacity-*`.
+- **Inside the landscape stage, use container variants (`@2xl:`), NOT viewport breakpoints (`sm:`/`lg:`).**
+  On a portrait phone the shell is CSS-rotated to present landscape, so the device reports a 390px
+  portrait viewport while the stage is 844px landscape. Viewport media queries — Tailwind's `sm:`/`lg:`
+  and `@media (orientation: …)` alike — describe the device and therefore take the *narrow* branch on a
+  *wide* stage. This is silent: it typechecks, builds, and passes tests while laying out wrongly.
+  `.landscape-stage` sets `container-type: inline-size` so `@` variants measure the stage, and it
+  publishes `data-orientation="landscape|portrait"` for the one thing a width query cannot express.
+  Safe-area insets are likewise permuted on `.landscape-stage-rotated`, because the transform sends the
+  stage's local top edge to the screen's right.
+- **Look at UI changes in a browser.** Playwright plus the bundled Chromium works here: run
+  `pnpm --filter @snake/client dev` and drive it with a short script. Several defects in the art pass
+  (confetti-looking turf, decoration that read as collectibles, a snake that dissolved into the grass,
+  the container-query bug above) were invisible to typecheck, tests, lint and the build.
 - **Wallet integration:** `packages/client/src/wallet/provider.ts` uses the official Mini App SDK. App
   load only initializes the provider; `listAccounts()` is called from explicit Connect because it opens
   a native confirmation. A typed `signWalletMessage()` wrapper is ready for Today's Run. Wallet access

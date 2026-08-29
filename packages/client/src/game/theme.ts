@@ -218,7 +218,7 @@ export const FIELD = {
    * intentional stadium and lets the lit turf carry the eye. The match HUD rails
    * sit over these margins.
    */
-  backdrop: mixHex(PALETTE.inkDeep, PALETTE.grassDeep, 0.18),
+  backdrop: 0x568239,
   /** Drop shadow under the whole stadium. */
   shadow: mixHex(PALETTE.grassDeep, PALETTE.inkDeep, 0.55),
   /** Outer frame around the pitch. */
