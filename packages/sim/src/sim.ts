@@ -118,6 +118,11 @@ export function step(state: GameState, inputs: AppliedInput[]): GameState {
     const sn = snakes[i];
     const a = inputs[i] ?? { turn: null, boost: false };
     if (!sn.alive) continue;
+    if (a.forfeit) {
+      sn.alive = false;
+      sn.boost = false;
+      continue;
+    }
     sn.boost = a.boost;
     if (a.turn) {
       const d = dirVec(a.turn);
@@ -131,6 +136,7 @@ export function step(state: GameState, inputs: AppliedInput[]): GameState {
   // 2. Move (boost = 2 sub-steps). Walls are fatal.
   for (const sn of snakes) {
     if (!sn.alive) continue;
+    if (sn.dir.x === 0 && sn.dir.y === 0) continue;
     const steps = sn.boost ? BOOST_SUBSTEPS : 1;
     for (let k = 0; k < steps; k++) {
       const h = sn.cells[0];

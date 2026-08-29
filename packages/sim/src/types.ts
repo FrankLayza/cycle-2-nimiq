@@ -34,6 +34,8 @@ export interface Bounds {
 export interface AppliedInput {
   turn: Dir | null;
   boost: boolean;
+  /** Server-authored terminal input used when a PvP player forfeits or times out. */
+  forfeit?: boolean;
 }
 
 export interface SnakeState {

@@ -35,9 +35,9 @@ function scripted(): AppliedInput[][] {
 describe('golden regression lock (D31)', () => {
   it('fixed seeds + fixed inputs produce pinned final-state hashes', () => {
     const cases: [number, string, Mode, AppliedInput[][]][] = [
-      [424242, 'aa37503f4572e4df751fdf2e89ab42b6c25000b5a3ac6d02630cd20fe89a05bc', 'bot', scripted()],
-      [20260817, 'ed74d35295ad82f4390cc4abb5d21cf58563ccb6e7c32b648afa165bae006b02', 'bot', scripted()],
-      [7, '08fdb1b28dbba0be3b052d8f3ed26e74b692d10d1fd5d1d5c2603604cd8b2dda', 'solo', NOOP],
+      [424242, '06c8baa7c2d36e1eb566513decbd8e5ea3bf5303ff54efb9f11268cd6cbafa43', 'bot', scripted()],
+      [20260817, '05868b9f4a90216eba88d6065493ef556523fef6bb253dd57c1d133a6efcbdd8', 'bot', scripted()],
+      [7, '6f758f5d9ca384a9e4e5004e2c62ddd4d0f2af36d37e2fcae69c3e0315eb8a2d', 'solo', NOOP],
     ];
     for (const [seed, expected, mode, inputs] of cases) {
       const r = replay(seed, SIM_VERSION, inputs, mode);

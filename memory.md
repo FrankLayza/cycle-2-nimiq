@@ -36,7 +36,7 @@ packages/
 
 Dependency direction (enforced): `server → sim` · `client → sim`. Client and server never import each other.
 
-## Current state (2026-08-22)
+## Current state (2026-08-29)
 
 - **W1 scaffold DONE + committed.** Sim ported with golden hashes locked; Colyseus room with tick loop;
   React/Phaser client with rotated viewport + local bot play; 23 tests green incl. a 2-client PvP e2e.
@@ -45,9 +45,10 @@ Dependency direction (enforced): `server → sim` · `client → sim`. Client an
   Today's Run signing, shared touch/keyboard controls, and payout status lookup are implemented.
   Real-device validation and production payout broadcasting remain.
 - **PvP flow:** lobby can create a room through `POST /api/v1/rooms` and join by the generated 4-character
-  code. Current capacity is explicitly 2 because the deterministic sim is still 1v1. Phaser keeps dead
-  snakes rendered at reduced opacity in the final state, preventing the empty-board result screen. A
-  3–4 player room selector must wait for a deliberate sim expansion and `SIM_VERSION` bump.
+  code. PvP supports 2–4 active seats with deterministic four-lane spawns and `SIM_VERSION` 4. Late
+  spectator joins are rejected; a player who dies remains connected and observes the survivors. Room admission
+  rejects duplicate codes in-process, matches lock at start, unexpected disconnects pause for bounded reconnection,
+  and consented/time-out forfeits are recorded as deterministic sim inputs.
 
 ## Conventions & gotchas
 
@@ -59,7 +60,8 @@ Dependency direction (enforced): `server → sim` · `client → sim`. Client an
 - **better-sqlite3 v13** ships prebuilt binaries (no build script; don't "fix" the install).
 - **Server runtime = tsx** (source-mode; no build step). Production on Railway also runs `tsx src/index.ts`.
 - **Sim rules:** tick-indexed, integer math, seeded RNG with context separation (arena/bot/effects),
-  arena pre-derived from seed. `SIM_VERSION` gates every run; golden tests lock behavior.
+  arena pre-derived from seed. `SIM_VERSION` gates every run; golden tests lock behavior. Version 4 includes
+  the server-authored deterministic PvP forfeit input and avoids moving zero-velocity fixtures.
 - **UI is Tailwind v4** (`@import "tailwindcss"` in `packages/client/src/index.css`, Fresh Rink palette
   defined via `@theme`). Per `agents.md` Rule 1, all UI must use **Tailwind v4 canonical class names**
   (see the rename table in `agents.md`) — never v3 aliases like `shadow`, `rounded`, `ring`,
@@ -68,27 +70,42 @@ Dependency direction (enforced): `server → sim` · `client → sim`. Client an
   load only initializes the provider; `listAccounts()` is called from explicit Connect because it opens
   a native confirmation. A typed `signWalletMessage()` wrapper is ready for Today's Run. Wallet access
   remains optional/non-blocking and still needs validation inside the Nimiq Pay WebView.
-- **Wallet/daily APIs:** server exposes `/api/v1/wallet/register`, `/api/v1/wallet/:address`, and
-  `/api/v1/leaderboard/today`. `/runs/verify` requires `{id, day, seed, reportedScore, attestation:
+- **Wallet/daily APIs:** server exposes `/api/v1/wallet/register`, `/api/v1/wallet/:address`,
+  `/api/v1/leaderboard/today`, `/api/v1/streaks/:wallet`, masked leaderboard wallets, and reward pool metadata. `/runs/verify` requires `{id, day, seed, reportedScore, attestation:
   {message, publicKey, signature}}`; the message must equal `snake-rink:today:{id}:{day}:{seed}:{score}`.
   Server verification now uses `@nimiq/core`; the public key must derive the submitted wallet address
   and the signature must verify the canonical message. Verified runs create/update wallet streak profiles.
 - Today's Run attestation verification is cryptographically implemented with `@nimiq/core`.
-  Reward transaction signing/broadcasting remains intentionally unavailable until the server-side
-  seeded signer and testnet transaction flow are configured.
+  Server-side payout signing/broadcasting now uses `@nimiq/core` with a seeded pool signer,
+  configurable fees, explorer URLs, and unknown-submission handling that prevents duplicate retries.
+
+## Recent implementation
+
+- Daily leaderboard contract is complete at `/api/v1/leaderboard/daily`, with `/today` retained as a compatibility alias, pagination, date/page validation, masked public entries, and explicit viewer metadata.
+- Verification rank, public leaderboard rank, and payout candidate selection use the same deterministic best-run ordering (score, length, wallet, run ID).
+
+## Recent implementation
+
+- The deploy workflow now runs `pnpm lint` alongside typecheck, tests, and client build (`5baefe2`).
+- Configured Railway deploy webhook failures now fail the deploy job instead of being ignored (`e8e410a`).
+- CI and deploy now run the existing `@snake/client` Vitest suite before the client build (`f05676f`).
+- Production configuration now fails fast on unsafe default secrets, missing `ALLOWED_ORIGINS`/`APP_URL`, invalid
+  ports, fees, pool sizes, or network names (`1404a68`, corrected tests in `76c79cc`).
+- Production configuration now also requires `REWARD_SIGNER_KEY` and rejects wildcard CORS (`c8e15b6`).
 
 ## Remaining implementation
 
-1. Real Nimiq testnet reward broadcaster, signer-key parsing, transaction validity/fees, and
-   crash-safe broadcast idempotency.
-2. Weekly leaderboard and weekly settlement, if retained in MVP scope.
+1. Fund and validate the configured testnet reward signer in a real deployment; on-chain acceptance
+   still requires human/deployment validation.
+2. Weekly leaderboard and weekly settlement remain stretch scope, not MVP.
 3. Nimiq Pay WebView validation: wallet connect/sign approval, rotation, safe areas, touch, share,
    and two-device PvP.
-4. Live leaderboard/streak refresh and wallet identity in the match HUD.
-5. Install Node 24/pnpm 10 in every development/CI environment, then run typecheck, lint, tests,
-   and client build; add test isolation if parallel Vitest execution exposes DB singleton races.
-6. Human release work: Railway/Pages credentials, public repo/registration/Skool, seeded testnet
-   reward wallet, README/demo, and final submission QA.
+4. Live leaderboard/streak refresh and wallet identity in the match HUD; the server streak read API is available.
+5. Node 24/pnpm 10 checks pass; server Vitest files are serialized because DB_PATH and the SQLite
+   singleton are process-global. Run verification and admin settlement reject malformed or future
+   UTC dates before doing seed, signature, or payout work.
+6. Human release work: Railway/Pages credentials, competition registration/Skool, funded testnet
+   reward wallet, demo video, and final submission QA. `LICENSE` and production README are present.
 - Room codes: 4-char Crockford base32 (no I/L/O/U).
 
 ## Commands

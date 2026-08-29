@@ -1,6 +1,6 @@
 # PROJECT_PROGRESS — Competitive Snake (Nimiq Mini App)
 
-**Updated:** 2026-08-23 · **Phase:** W2 client UI, wallet integration, and payout preparation · **Next milestone:** real-device Nimiq Pay pass + testnet payout broadcaster
+**Updated:** 2026-08-29 · **Phase:** W2 multiplayer and connection hardening, wallet integration, and payout hardening · **Next milestone:** real-device Nimiq Pay pass + funded testnet validation
 
 Source of truth: `COMPETITIVE_SNAKE_GAME.md` · Architecture: `architecture/ARCHITECTURE.md` · Lifecycle: [`docs/lifecycle/INDEX.md`](./lifecycle/INDEX.md) · Handoff: `docs/AI_HANDOFF.md`
 
@@ -11,7 +11,7 @@ Source of truth: `COMPETITIVE_SNAKE_GAME.md` · Architecture: `architecture/ARCH
 The monorepo is scaffolded and green. Verified locally (2026-08-15):
 
 - `pnpm typecheck` — clean in all 3 packages.
-- `pnpm test` — **23 tests passing**: 12 sim (golden hash lock D31, determinism, replay verification) + 11 server (room codes, daily seed, Today's Run verify API, and the **2-client Colyseus PvP e2e** — D37).
+- `pnpm test` — sim and server suites pass, including the **four-client Colyseus PvP e2e** and room capacity API coverage.
 - `pnpm --filter @snake/client build` — builds; initial bundle 383 kB gzip (under the 400 kB spec budget).
 
 ### What exists now
@@ -26,27 +26,39 @@ The monorepo is scaffolded and green. Verified locally (2026-08-15):
 
 ### Decisions made this milestone
 
-D35 (scaffold runtime: tsx source-mode, no build orchestration) · D36 (Colyseus 0.16 pinned, `defineTypes()` schemas) · D37 (2-client PvP e2e verified) · D38 (verify API shipped early) · D39 (client plays local bot matches in W1; PvP wiring in W2) · D40 (Fresh Rink UI + code-split Lawn League renderer) · D41 (Fresh Rink interaction polish) · D42 (StrictMode-safe PvP joins) · D43 (responsive landing, unified match/mobile controls, and restrained 2.5D Phaser depth).
+D35 (scaffold runtime: tsx source-mode, no build orchestration) · D36 (Colyseus 0.16 pinned, `defineTypes()` schemas) · D37 (authoritative PvP e2e verified) · D38 (verify API shipped early) · D39 (client plays local bot matches in W1; PvP wiring in W2) · D40 (Fresh Rink UI + code-split Lawn League renderer) · D41 (Fresh Rink interaction polish) · D42 (StrictMode-safe PvP joins) · D43 (responsive landing, unified match/mobile controls, and restrained 2.5D Phaser depth) · D44 (2–4 active PvP seats; dead players observe, late spectator joins rejected).
 
 ### Not done yet (needs human/credentials or is planned for W2)
 
-1. **Public GitHub repo + MIT license + competition registration + Skool join** (W1 checklist, human action).
+The daily leaderboard contract is complete (`/leaderboard/daily`, `/today` alias, pagination and validation),
+and leaderboard, verification, and payout ranking now share deterministic tie-breaking.
+The deploy workflow also runs lint before deployment (`5baefe2`).
+Configured Railway webhook failures now stop deployment (`e8e410a`) instead of producing a false-green job.
+CI and deploy also run the client Vitest suite (`f05676f`) before building the client.
+Production startup now rejects unsafe defaults and malformed deployment configuration (`1404a68`, `76c79cc`).
+It also requires the payout signer and rejects wildcard production CORS (`c8e15b6`).
+
+1. **Public GitHub repo + MIT license + competition registration + Skool join** — `LICENSE` and production README are present; registration and Skool remain human actions.
 2. **Railway + Pages deploy wiring** (`RAILWAY_DEPLOY_HOOK` secret, real deploy) — `.env.example` + workflows ready.
-3. **Nimiq tx-signing spike** (payout prerequisite) — `REWARD_SIGNER_KEY` is checked by the admin route, but transaction construction/broadcast is not implemented; testnet faucet remains required (architecture §7).
-4. **W2:** The official Nimiq SDK, Fresh Rink UI, and Lawn League renderer are implemented. Server wallet profiles, daily leaderboard endpoints, cryptographic attestations, and verified-run streak updates are implemented. PvP has create/join-by-code flow, StrictMode-safe creator joins, and preserves dead snakes in the final render; supported room capacity remains deterministic 1v1. Remaining: real-WebView validation, device QA, live leaderboard/streak data, and wallet identity in the match HUD.
-5. **Verification:** rerun the full client and repository checks after Node 24/pnpm 10 are available; current environment/toolchain previously lacked accessible executables.
+3. **Nimiq tx-signing implementation** — server builds/signs/broadcasts basic transfers via `@nimiq/core`; remaining work is funding and validating the signer in deployment.
+4. **W2:** The official Nimiq SDK, Fresh Rink UI, and Lawn League renderer are implemented. Server wallet profiles, daily leaderboard/streak endpoints, masked leaderboard metadata, reward pool metadata, cryptographic attestations, and verified-run streak updates are implemented. PvP has create/join-by-code flow, StrictMode-safe creator joins, and 2–4 active seats; dead players keep receiving state while late spectator joins are rejected. Remaining: real-WebView validation, device QA, live leaderboard/streak data, and wallet identity in the match HUD.
+5. **Verification:** full typecheck, lint, test suite, and client build pass on Node 24/pnpm 10; server Vitest files run serially to protect the SQLite singleton. Date input validation is covered for run verification and admin settlement.
 6. **Eslint** runs but is not yet wired into per-package type-aware checks (flat config, non-type-aware).
 
 ---
+
+### Connection hardening completed (D47)
+
+The authoritative room now uses the 110ms simulation cadence for patches, rejects malformed input, blocks duplicate room-code instances, locks matches once play begins, pauses briefly for unexpected reconnects, records disconnect/timeout forfeits as deterministic inputs, and requires unanimous rematch confirmation. Focused room tests cover capacity, countdown cancellation, reconnection, malformed input, forfeits, and four-player play.
 
 ## Success metrics (D19) — tracking
 
 ## Deferred verification debt
 
-- **Server Vitest worker errors:** the server suite currently reports 40 passing tests plus 5 unhandled worker-process errors, even with `fileParallelism: false` and `--maxWorkers=1`. This is intentionally deferred until the UI work is complete; investigate Vitest/Node/better-sqlite3 process handling before release. It is not caused by the client UI changes.
+- **Server Vitest worker errors:** the serialized server suite now passes cleanly; continue monitoring Vitest/Node/better-sqlite3 process handling in CI before release.
 
-- ✅ Functionality: replay verification agreement is unit-tested; p95 latency, match length, crash-free — verify on device in W2.
+- ✅ Functionality: replay verification agreement is unit-tested; payout signing, explorer metadata, and unknown-submission handling are covered; p95 latency, match length, and crash-free operation remain device/deployment checks.
 - ⏳ Usefulness/Repeat: N/A yet (no live users).
 - ⏳ Marketing: no posts yet — start build-in-public cadence (D18: 2–3/wk).
-- ⏳ Rewards pool: candidate selection, replay/attestation re-verification, payout intents, and status lookup are implemented; real transaction broadcasting is outstanding.
+- ⏳ Rewards pool: candidate selection, replay/attestation re-verification, payout intents, status lookup, transaction broadcasting, and explorer metadata are implemented; funding and on-chain deployment validation remain.
 - ⏳ Rubric self-score: first 20-item self-score at W2 milestone.

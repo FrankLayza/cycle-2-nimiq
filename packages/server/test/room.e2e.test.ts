@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { ArraySchema, MapSchema, Schema, defineTypes } from '@colyseus/schema';
 import { Client } from 'colyseus.js';
+import type { Room } from 'colyseus.js';
 import { startServer } from '../src/index.js';
 import { closeDb } from '../src/db/client.js';
 
@@ -119,6 +120,7 @@ interface MatchResultJson {
   version: number;
   ticks: number;
   winner: number | null;
+  forfeited: number[];
   snakes: { id: number; score: number; length: number; alive: boolean }[];
 }
 
@@ -140,7 +142,99 @@ afterAll(async () => {
   rmSync(tmp, { recursive: true, force: true });
 });
 
-describe('MatchRoom e2e (four Colyseus clients)', () => {
+describe('MatchRoom e2e', () => {
+  it('cancels the countdown when the lobby drops below two players', async () => {
+    const c1 = new Client(`ws://localhost:${port}`);
+    const c2 = new Client(`ws://localhost:${port}`);
+    const room1 = await c1.joinOrCreate('match', { mode: 'pvp', code: 'EFGH', wallet: 'w1', maxPlayers: 2 }, ClientMatchState);
+    const room2 = await c2.joinOrCreate('match', { mode: 'pvp', code: 'EFGH', wallet: 'w2' }, ClientMatchState);
+
+    await waitFor(() => room1.state.status === 'countdown', 3000);
+    await room2.leave();
+    await waitFor(() => room1.state.status === 'lobby' && room1.state.snakes.size === 1, 3000);
+    await sleep(3500);
+    expect(room1.state.status).toBe('lobby');
+    expect(room1.state.tick).toBe(0);
+
+    await room1.leave();
+  }, 12000);
+
+  it('rejects a fifth player instead of creating a spectator or duplicate-code room', async () => {
+    const clients = Array.from({ length: 5 }, () => new Client(`ws://localhost:${port}`));
+    const rooms: Room<ClientMatchState>[] = [];
+    for (let index = 0; index < 4; index++) {
+      rooms.push(await clients[index].joinOrCreate(
+        'match',
+        { mode: 'pvp', code: 'JKMP', wallet: `w${index + 1}`, maxPlayers: 4 },
+        ClientMatchState,
+      ));
+    }
+
+    await waitFor(() => rooms[0].state.snakes.size === 4, 3000);
+    await expect(clients[4].joinOrCreate(
+      'match',
+      { mode: 'pvp', code: 'JKMP', wallet: 'w5', maxPlayers: 4 },
+      ClientMatchState,
+    )).rejects.toThrow();
+    expect(rooms.every((room) => room.roomId === 'JKMP')).toBe(true);
+    expect(rooms[0].state.snakes.size).toBe(4);
+
+    await Promise.all(rooms.map((room) => room.leave()));
+  }, 12000);
+
+  it('pauses for an unexpected disconnect and restores the same seat on reconnection', async () => {
+    const c1 = new Client(`ws://localhost:${port}`);
+    const c2 = new Client(`ws://localhost:${port}`);
+    const room1 = await c1.joinOrCreate('match', { mode: 'pvp', code: 'QRST', wallet: 'w1', maxPlayers: 2 }, ClientMatchState);
+    const room2 = await c2.joinOrCreate('match', { mode: 'pvp', code: 'QRST', wallet: 'w2' }, ClientMatchState);
+
+    await waitFor(() => room1.state.status === 'playing', 10000);
+    const seat = [...room1.state.snakes.values()].find((snake) => snake.sessionId === room2.sessionId)?.seat;
+    expect(seat).toBeDefined();
+    const token = room2.reconnectionToken;
+    const tickBeforeDisconnect = room1.state.tick;
+    await room2.leave(false);
+    await sleep(500);
+    expect(room1.state.tick).toBeLessThanOrEqual(tickBeforeDisconnect + 1);
+
+    const reconnected = await new Client(`ws://localhost:${port}`).reconnect(token, ClientMatchState);
+    await waitFor(() => room1.state.tick > tickBeforeDisconnect + 1, 3000);
+    expect(reconnected.sessionId).toBe(room2.sessionId);
+    expect(room1.state.snakes.get(String(seat))?.sessionId).toBe(reconnected.sessionId);
+    expect(room1.state.snakes.get(String(seat))?.alive).toBe(true);
+
+    await reconnected.leave();
+    await waitFor(() => room1.state.status === 'finished', 3000);
+    await room1.leave();
+  }, 15000);
+
+  it('ignores malformed input and records a consented leave as a visible forfeit', async () => {
+    const c1 = new Client(`ws://localhost:${port}`);
+    const c2 = new Client(`ws://localhost:${port}`);
+    const room1 = await c1.joinOrCreate('match', { mode: 'pvp', code: 'VWXY', wallet: 'w1', maxPlayers: 2 }, ClientMatchState);
+    const room2 = await c2.joinOrCreate('match', { mode: 'pvp', code: 'VWXY', wallet: 'w2' }, ClientMatchState);
+
+    await waitFor(() => room1.state.status === 'playing', 10000);
+    const seat = [...room1.state.snakes.values()].find((snake) => snake.sessionId === room2.sessionId)?.seat;
+    expect(seat).toBeDefined();
+    const tickBeforeInvalidInput = room1.state.tick;
+    room1.send('input', { turn: 'diagonal', boost: 'yes' });
+    await waitFor(() => room1.state.tick > tickBeforeInvalidInput + 1, 3000);
+
+    await room2.leave();
+    await waitFor(() => room1.state.status === 'finished', 3000);
+    const forfeitedSnake = room1.state.snakes.get(String(seat));
+    expect(forfeitedSnake).toBeDefined();
+    expect(forfeitedSnake?.alive).toBe(false);
+    expect(forfeitedSnake?.cells.length).toBeGreaterThan(0);
+
+    const result = JSON.parse(room1.state.resultJson) as MatchResultJson;
+    expect(result.forfeited).toEqual([seat]);
+    expect(result.winner).not.toBe(seat);
+
+    await room1.leave();
+  }, 15000);
+
   it('runs a full authoritative four-player PvP match', async () => {
     const c1 = new Client(`ws://localhost:${port}`);
     const c2 = new Client(`ws://localhost:${port}`);

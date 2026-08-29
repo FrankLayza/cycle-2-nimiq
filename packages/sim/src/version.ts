@@ -5,4 +5,4 @@
  * silently re-scoring. The golden-hash regression tests force a conscious
  * bump here whenever the sim behavior changes.
  */
-export const SIM_VERSION = 3;
+export const SIM_VERSION = 4;

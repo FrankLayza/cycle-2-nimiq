@@ -51,6 +51,16 @@ describe('determinism (D31)', () => {
     expect(result.inputLog[0]).toEqual([noop, noop, noop, noop]);
   });
 
+  it('records a PvP forfeit as a deterministic terminal input', () => {
+    const noop = { turn: null, boost: false } as const;
+    const forfeited = { turn: null, boost: false, forfeit: true } as const;
+    const result = replay(12345, SIM_VERSION, [[noop, forfeited]], 'pvp');
+    expect(result.ticks).toBe(1);
+    expect(result.winner).toBe(0);
+    expect(result.snakes.map((snake) => snake.alive)).toEqual([true, false]);
+    expect(result.inputLog[0]).toEqual([noop, forfeited]);
+  });
+
   it('resolves a three-way equal-length head-on without iteration-order survivors', () => {
     const state = createRun(12345, 'pvp', SIM_VERSION, 3);
     state.pellets = [];
