@@ -12,6 +12,19 @@ import {
   skinFor,
   specularOffset,
 } from './theme';
+import {
+  TURF_SHEET_URL,
+  TURF_TEXTURE_KEY,
+  TURF_TILE_PX,
+  buildTurfLayout,
+} from './turf';
+
+/** Render order. Turf tiles are re-added on every field rebuild, so depth is explicit. */
+const DEPTH = {
+  turf: -20,
+  field: -10,
+  actors: 0,
+} as const;
 
 interface FloatingPopup {
   x: number;
@@ -33,8 +46,10 @@ interface ParticleFX {
 }
 
 export class MatchScene extends Phaser.Scene {
+  private turf!: Phaser.GameObjects.Group;
   private field!: Phaser.GameObjects.Graphics;
   private actors!: Phaser.GameObjects.Graphics;
+  private ready = false;
   private previous: RenderSnapshot | null = null;
   private current: RenderSnapshot | null = null;
   private currentReceivedAt = 0;
@@ -71,25 +86,51 @@ export class MatchScene extends Phaser.Scene {
     return this.cellPx / REFERENCE_CELL_PX;
   }
 
+  preload() {
+    this.load.spritesheet(TURF_TEXTURE_KEY, TURF_SHEET_URL, {
+      frameWidth: TURF_TILE_PX,
+      frameHeight: TURF_TILE_PX,
+    });
+  }
+
   create() {
     this.updateDimensions();
     this.cameras.main.setBackgroundColor(FIELD.backdrop);
-    this.field = this.add.graphics();
-    this.actors = this.add.graphics();
+    // Explicit depths: tiles are added to the display list after the Graphics
+    // layers on every field rebuild, so insertion order cannot be relied on.
+    this.turf = this.add.group();
+    this.field = this.add.graphics().setDepth(DEPTH.field);
+    this.actors = this.add.graphics().setDepth(DEPTH.actors);
+    this.ready = true;
 
     this.scale.on('resize', () => {
       this.updateDimensions();
       if (this.decoratedSeed !== null) this.drawField(this.decoratedSeed);
     });
+
+    // A snapshot can arrive before the sheet finishes loading, so paint whatever
+    // is already buffered now that the scene is live.
+    if (this.current) this.drawField(this.current.seed);
   }
 
   private updateDimensions() {
     const width = this.scale.width;
     const height = this.scale.height;
-    this.fieldSize = Math.min(width, height);
-    this.cellPx = this.fieldSize / GRID_SIZE;
-    this.offX = (width - this.fieldSize) / 2;
-    this.offY = (height - this.fieldSize) / 2;
+    /*
+     * Integer cell size, so every cell boundary lands on a whole device pixel and
+     * the tiled turf has no seams or drift.
+     *
+     * The tile interior still scales fractionally, which is unavoidable: 30 cells
+     * at the sheet's native 16px need 480px, and a phone in landscape is often
+     * shorter than that, so an integer *tile* scale would not fit at all — and
+     * where it did fit it would waste up to a third of the viewport. Fractional
+     * scaling of a ground texture is not noticeable; revisit if the snakes become
+     * sprites, which would want a low-resolution canvas upscaled as one image.
+     */
+    this.cellPx = Math.max(1, Math.floor(Math.min(width, height) / GRID_SIZE));
+    this.fieldSize = this.cellPx * GRID_SIZE;
+    this.offX = Math.floor((width - this.fieldSize) / 2);
+    this.offY = Math.floor((height - this.fieldSize) / 2);
   }
 
   submitSnapshot(snapshot: RenderSnapshot, receivedAt?: number) {
@@ -102,6 +143,7 @@ export class MatchScene extends Phaser.Scene {
     this.previous = this.current;
     this.current = snapshot;
     this.currentReceivedAt = timestamp;
+    if (!this.ready) return;
     if (this.previous) this.spawnPelletFx(this.previous, snapshot, timestamp);
     if (this.decoratedSeed !== snapshot.seed) this.drawField(snapshot.seed);
   }
@@ -191,119 +233,60 @@ export class MatchScene extends Phaser.Scene {
 
   private drawField(seed: number) {
     this.decoratedSeed = seed;
+    this.drawTurf(seed);
+
     const g = this.field;
-    const u = this.unit;
     g.clear();
 
-    const radius = Math.max(20 * u, this.fieldSize * 0.035);
-    const rim = Math.max(10 * u, this.fieldSize * 0.016);
-    const shadow = shadowOffset(this.cellPx);
-
-    // 1. Stadium Outer Depth Shadow
-    g.fillStyle(FIELD.shadow, 0.35);
-    g.fillRoundedRect(
-      this.offX + shadow.x * 4,
-      this.offY + shadow.y * 4,
-      this.fieldSize,
-      this.fieldSize,
-      radius + 6 * u
+    /*
+     * A hard-edged frame, aligned to the cell grid.
+     *
+     * What used to be here — a rounded stadium bevel, a chalk centre circle, and
+     * 40 vector daisies — all fought the 16px tiles: smooth anti-aliased curves
+     * over nearest-neighbour pixel art reads as two unrelated pieces of art. The
+     * mow stripes went too: they were drawn one per gameplay column, which made
+     * the 30x30 lattice the most prominent thing on the field. The tiles now
+     * carry the texture, and their variant is seeded per cell so nothing lines up
+     * with the grid.
+     */
+    const border = Math.max(2, Math.round(this.cellPx * 0.3));
+    g.lineStyle(border, FIELD.rim, 1);
+    g.strokeRect(
+      this.offX - border / 2,
+      this.offY - border / 2,
+      this.fieldSize + border,
+      this.fieldSize + border
     );
+    g.lineStyle(Math.max(1, Math.round(border / 3)), FIELD.rimInner, 0.85);
+    g.strokeRect(this.offX, this.offY, this.fieldSize, this.fieldSize);
+  }
 
-    // 2. Stadium Outer Bevel Rim
-    g.fillStyle(FIELD.rim, 1);
-    g.fillRoundedRect(this.offX, this.offY, this.fieldSize, this.fieldSize, radius);
+  /**
+   * Stamp the turf tiles.
+   *
+   * All 900 images share one texture, so they batch into a single draw call, and
+   * they are static — this runs once per seed (and on resize), never per frame.
+   */
+  private drawTurf(seed: number) {
+    this.turf.clear(true, true);
+    const layout = buildTurfLayout(seed, GRID_SIZE);
+    const scale = this.cellPx / TURF_TILE_PX;
 
-    // 3. Inner Turf Bevel (recessed pitch)
-    g.fillStyle(FIELD.rimInner, 1);
-    g.fillRoundedRect(
-      this.offX + rim * 0.5,
-      this.offY + rim * 0.5,
-      this.fieldSize - rim,
-      this.fieldSize - rim,
-      radius - 2 * u
-    );
-
-    // 4. Main Lush Grass Surface
-    g.fillStyle(FIELD.turf, 1);
-    g.fillRoundedRect(
-      this.offX + rim,
-      this.offY + rim,
-      this.fieldSize - rim * 2,
-      this.fieldSize - rim * 2,
-      radius - rim * 0.6
-    );
-
-    // 5. Alternating Mowed Lawn Stripes
-    for (let x = 0; x < GRID_SIZE; x++) {
-      if (x % 2 === 0) g.fillStyle(FIELD.stripeLight, 0.35);
-      else g.fillStyle(FIELD.stripeDark, 0.25);
-      g.fillRect(this.offX + rim + x * this.cellPx, this.offY + rim, this.cellPx, this.fieldSize - rim * 2);
-    }
-
-    // 6. Cross Lawn Texture Bands
-    for (let y = 0; y < GRID_SIZE; y += 4) {
-      g.fillStyle(FIELD.band, 0.08);
-      g.fillRect(
-        this.offX + rim,
-        this.offY + rim + y * this.cellPx,
-        this.fieldSize - rim * 2,
-        this.cellPx * 0.7
-      );
-    }
-
-    // 7. Subtle Pitch Chalk Markings (Center Circle & Pitch Perimeter)
-    const centerX = this.offX + this.fieldSize / 2;
-    const centerY = this.offY + this.fieldSize / 2;
-    g.lineStyle(2 * u, FIELD.chalk, 0.14);
-    g.strokeCircle(centerX, centerY, this.cellPx * 3.5);
-    g.fillStyle(FIELD.chalk, 0.18);
-    g.fillCircle(centerX, centerY, 3.5 * u);
-
-    // 8. Seeded Daisies & Clovers
-    let value = seed || 12345;
-    const random = () => {
-      value = (value * 1664525 + 1013904223) >>> 0;
-      return value / 0x100000000;
-    };
-
-    for (let i = 0; i < 40; i++) {
-      const inset = this.fieldSize * 0.035;
-      const fx = this.offX + inset + random() * (this.fieldSize - inset * 2);
-      const fy = this.offY + inset + random() * (this.fieldSize - inset * 2);
-      const isClover = i % 3 === 0;
-
-      if (isClover) {
-        g.fillStyle(FIELD.decorShadow, 0.25);
-        g.fillCircle(fx + shadow.x, fy + shadow.y, 4 * u);
-        g.fillStyle(FIELD.clover, 0.85);
-        for (let leaf = 0; leaf < 3; leaf++) {
-          const angle = (leaf * Math.PI * 2) / 3;
-          g.fillCircle(fx + Math.cos(angle) * 2.5 * u, fy + Math.sin(angle) * 2.5 * u, 2.2 * u);
-        }
-      } else {
-        g.fillStyle(FIELD.decorShadow, 0.3);
-        g.fillCircle(fx + shadow.x, fy + shadow.y, 4.5 * u);
-        g.fillStyle(PALETTE.white, 0.88);
-        for (let petal = 0; petal < 4; petal++) {
-          const angle = (petal * Math.PI) / 2;
-          g.fillCircle(fx + Math.cos(angle) * 3 * u, fy + Math.sin(angle) * 3 * u, 2.2 * u);
-        }
-        g.fillStyle(PALETTE.lemon, 0.95);
-        g.fillCircle(fx, fy, 2 * u);
+    for (let y = 0; y < GRID_SIZE; y++) {
+      for (let x = 0; x < GRID_SIZE; x++) {
+        const tile = this.add
+          .image(
+            this.offX + x * this.cellPx,
+            this.offY + y * this.cellPx,
+            TURF_TEXTURE_KEY,
+            layout[y * GRID_SIZE + x]
+          )
+          .setOrigin(0, 0)
+          .setScale(scale)
+          .setDepth(DEPTH.turf);
+        this.turf.add(tile);
       }
     }
-
-    // 9. Stadium Top Lip Highlight & Inner Border
-    g.lineStyle(2 * u, PALETTE.white, 0.28);
-    g.strokeRoundedRect(
-      this.offX + rim,
-      this.offY + rim,
-      this.fieldSize - rim * 2,
-      this.fieldSize - rim * 2,
-      radius - rim * 0.6
-    );
-    g.lineStyle(3 * u, FIELD.shadow, 0.5);
-    g.strokeRoundedRect(this.offX, this.offY, this.fieldSize, this.fieldSize, radius);
   }
 
   private renderSnapshot(state: RenderSnapshot, time: number) {

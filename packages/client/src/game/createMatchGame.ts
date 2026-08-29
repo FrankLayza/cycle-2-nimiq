@@ -80,7 +80,10 @@ export function createMatchGame(host: HTMLElement): ResponsiveGame {
     height: initial.height,
     backgroundColor: FIELD.backdrop,
     scale: { mode: Phaser.Scale.NONE, autoCenter: Phaser.Scale.NO_CENTER },
-    render: { antialias: true, powerPreference: 'high-performance' },
+    // The field is pixel art (16px Kenney tiles), so it must be sampled
+    // nearest-neighbour. `pixelArt` also enables roundPixels, keeping sprites off
+    // half-pixel positions where they would shimmer while the snake interpolates.
+    render: { pixelArt: true, powerPreference: 'high-performance' },
     scene: [MatchScene],
   });
 

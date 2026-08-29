@@ -190,8 +190,12 @@ export function specularOffset(cellPx: number): Offset {
 }
 
 /**
- * Turf ramp, derived from the grass tokens so the field is one coherent set of
- * values instead of six unrelated literals.
+ * Field colours, derived from the grass tokens.
+ *
+ * The turf surface itself is no longer painted from here — it is tiled from the
+ * Kenney sheet (see `turf.ts`), which is why the old surface, mow-stripe, cross-
+ * band and chalk entries are gone. What remains is the surround and the overlays
+ * that still draw as vector shapes on top of the tiles.
  */
 export const FIELD = {
   /**
@@ -206,23 +210,13 @@ export const FIELD = {
   backdrop: mixHex(PALETTE.inkDeep, PALETTE.grassDeep, 0.18),
   /** Drop shadow under the whole stadium. */
   shadow: mixHex(PALETTE.grassDeep, PALETTE.inkDeep, 0.55),
-  /** Outer bevel rim. */
+  /** Outer frame around the pitch. */
   rim: PALETTE.grassDeep,
-  /** Recessed inner bevel between rim and turf. */
+  /** Inner frame line, just inside the rim. */
   rimInner: mixHex(PALETTE.grassDeep, PALETTE.inkDeep, 0.3),
-  /** Main turf surface. */
-  turf: mixHex(PALETTE.grassLight, PALETTE.grass, 0.35),
-  /** Mow stripe, lit pass. */
-  stripeLight: mixHex(PALETTE.grassLight, WARM_LIGHT, 0.16),
-  /** Mow stripe, shaded pass. */
-  stripeDark: mixHex(PALETTE.grass, PALETTE.grassDeep, 0.4),
-  /** Cross-band texture. */
-  band: mixHex(PALETTE.grassDeep, PALETTE.inkDeep, 0.2),
-  /** Chalk markings. */
-  chalk: PALETTE.white,
-  /** Clover leaves. */
+  /** Foliage green, used for the pellet leaf. */
   clover: mixHex(PALETTE.grass, PALETTE.grassDeep, 0.35),
-  /** Ground shadow under decorations. */
+  /** Ground shadow under decorations and expiring pickups. */
   decorShadow: mixHex(PALETTE.grassDeep, PALETTE.inkDeep, 0.5),
   /** Zone outside the active shrinking boundary. */
   forbidden: mixHex(PALETTE.grassDeep, PALETTE.inkDeep, 0.62),
